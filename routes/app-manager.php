@@ -2,7 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('api/app-manager/{type}')->group(function () {
+Route::prefix('api/app-manager')->group(function () {
 
     Route::get('marketing-banners', function ($type) {
 

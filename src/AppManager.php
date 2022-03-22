@@ -2,19 +2,21 @@
 
 namespace HulkApps\AppManager;
 
-use GuzzleHttp\Client;
+use HulkApps\AppManager\Client\Client;
 
 class AppManager
 {
-    private $client;
+    public $client;
 
-    public function __construct($api_endpoint, $api_key)
-    {
-        $client = new Client([
-            'base_uri' => $api_endpoint,
-            'defaults' => [
-                'headers' => ['token' => $api_key]
-            ]
-        ]);
+    public function __construct($api_endpoint, $api_key) {
+
+        $this->client = Client::withHeaders(['token' => $api_key])->baseUri($api_endpoint);
+    }
+
+    public function getBanners() {
+
+        $data = $this->client->get('static-contents');
+        
+        return $data->json();
     }
 }
