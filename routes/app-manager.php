@@ -2,9 +2,14 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('api/app-manager')->group(function () {
+Route::prefix('api/app-manager/{type}')->group(function () {
 
-    Route::get('marketing-banners', function () {
-        return "Test";
+    Route::get('marketing-banners', function ($type) {
+
+        if ($type === 'header') {
+            return "Return header data";
+        } else {
+            return "Footer data";
+        }
     });
 });

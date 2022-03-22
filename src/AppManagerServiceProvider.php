@@ -36,7 +36,7 @@ class AppManagerServiceProvider extends ServiceProvider
 
         // Register the main class to use with the facade
         $this->app->singleton('app-manager', function () {
-            return new AppManager;
+            return new AppManager(config('app-manager.api'), config('app-manager.secret'));
         });
     }
 }
