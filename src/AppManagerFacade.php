@@ -13,6 +13,6 @@ class AppManagerFacade extends Facade
      */
     protected static function getFacadeAccessor()
     {
-        return 'appmanager';
+        return 'app-manager';
     }
 }
