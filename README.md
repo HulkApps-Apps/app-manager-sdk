@@ -1,8 +1,7 @@
 # App Manager SDK
 
-[//]: # ([![Latest Version on Packagist]&#40;https://img.shields.io/packagist/v/hulkapps/appmanager.svg?style=flat-square&#41;]&#40;https://packagist.org/packages/hulkapps/appmanager&#41;)
-[//]: # ([![Total Downloads]&#40;https://img.shields.io/packagist/dt/hulkapps/appmanager.svg?style=flat-square&#41;]&#40;https://packagist.org/packages/hulkapps/appmanager&#41;)
-[//]: # (![GitHub Actions]&#40;https://github.com/hulkapps/appmanager/actions/workflows/main.yml/badge.svg&#41;)
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/hulkapps/appmanager.svg?style=flat-square)](https://packagist.org/packages/hulkapps/appmanager)
+[![Total Downloads](https://img.shields.io/packagist/dt/hulkapps/appmanager.svg?style=flat-square)](https://packagist.org/packages/hulkapps/appmanager)
 
 [//]: # (This is where your description should go. Try and limit it to a paragraph or two, and maybe throw in a mention of what PSRs you support to avoid any confusion with users and contributors.)
 
@@ -17,8 +16,11 @@ composer require hulkapps/appmanager
 ## Usage
 
 ```php
-// Usage description here
+php artisan vendor:publish --provider="HulkApps\AppManager\AppManagerServiceProvider"
 ```
+
+Don't forget to update secret on file config/app-manager.php
+
 
 ### Testing
 
