@@ -9,11 +9,11 @@ return [
     |
     | The endpoint of app manager apis to retrieve data for the app
     |
-    | Default: https://app-manager.hulkapps.dev/api/
+    | Default: https://app-manager.hulkapps.com/api/
     |
     |-------------------------------------------
     */
-    'api' => 'https://app-manager.hulkapps.dev/api/',
+    'api' => env('APP_MANAGER_URI', 'https://app-manager.hulkapps.com/api/v1'),
 
     /*
     |-------------------------------------------
@@ -24,7 +24,7 @@ return [
     |
     |-------------------------------------------
     */
-    'secret' => '',
+    'secret' => env('APP_MANAGER_SECRET', ''),
 
     /*
     |-------------------------------------------
@@ -37,7 +37,7 @@ return [
     |
     |-------------------------------------------
     */
-    'version' => 'latest',
+    'version' => env('APP_MANAGER_API_VER', 'latest'),
 
     /*
     |-------------------------------------------

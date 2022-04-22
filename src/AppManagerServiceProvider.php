@@ -23,6 +23,10 @@ class AppManagerServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__.'/../config/config.php' => config_path('app-manager.php'),
             ], 'config');
+
+            $this->publishes([
+                __DIR__.'/../config/plan_features.php' => config_path('plan_features.php'),
+            ], 'config');
         }
     }
 
