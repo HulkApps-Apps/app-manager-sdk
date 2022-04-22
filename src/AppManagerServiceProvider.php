@@ -2,6 +2,8 @@
 
 namespace HulkApps\AppManager;
 
+use HulkApps\AppManager\app\Http\Middleware\VerifyAPIRequest;
+use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 
 class AppManagerServiceProvider extends ServiceProvider
@@ -18,6 +20,11 @@ class AppManagerServiceProvider extends ServiceProvider
         // $this->loadViewsFrom(__DIR__.'/../resources/views', 'app-manager');
         // $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
          $this->loadRoutesFrom(__DIR__ . '/../routes/app-manager.php');
+
+        $router = $this->app->make(Router::class);
+
+        $router->aliasMiddleware('app-manager-api', VerifyAPIRequest::class);
+
 
         if ($this->app->runningInConsole()) {
             $this->publishes([
