@@ -4,7 +4,7 @@ namespace HulkApps\AppManager\app\Http\Controllers;
 
 use Illuminate\Routing\Controller;
 
-class FeaturesController extends Controller
+class PlanController extends Controller
 {
     public function index() {
 
