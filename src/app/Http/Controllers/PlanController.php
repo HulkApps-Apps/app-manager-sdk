@@ -12,4 +12,11 @@ class PlanController extends Controller
 
         return response()->json(['features' => $features]);
     }
+
+    public function plans() {
+
+        $plans = \AppManager::getPlans();
+
+        return response()->json(['plans' => $plans]);
+    }
 }

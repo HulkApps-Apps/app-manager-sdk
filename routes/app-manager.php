@@ -10,5 +10,6 @@ Route::prefix('api/app-manager')->group(function () {
 
     Route::middleware('app-manager-api')->group(function (){
         Route::get('plan-features', PlanController::class.'@index');
+        Route::get('plans', PlanController::class.'@plans');
     });
 });

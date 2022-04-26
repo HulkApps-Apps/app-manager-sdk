@@ -19,4 +19,11 @@ class AppManager
         
         return $data->json();
     }
+
+    public function getPlans() {
+
+        $data = $this->client->get('plans');
+
+        return $data->json();
+    }
 }

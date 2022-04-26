@@ -13,7 +13,7 @@ return [
     |
     |-------------------------------------------
     */
-    'api' => env('APP_MANAGER_URI', 'https://app-manager.hulkapps.com/api/v1'),
+    'api' => env('APP_MANAGER_URI', 'https://app-manager.localhost/api/v1'),
 
     /*
     |-------------------------------------------
@@ -24,7 +24,7 @@ return [
     |
     |-------------------------------------------
     */
-    'secret' => env('APP_MANAGER_SECRET', ''),
+    'secret' => env('APP_MANAGER_SECRET', '30293a94-145b-4383-8f51-506eb8d87bc2'),
 
     /*
     |-------------------------------------------
