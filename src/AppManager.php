@@ -10,7 +10,7 @@ class AppManager
 
     public function __construct($api_endpoint, $api_key) {
 
-        $this->client = Client::withHeaders(['token' => $api_key])->baseUri($api_endpoint);
+        $this->client = Client::withHeaders(['token' => $api_key])->withoutVerifying()->baseUri($api_endpoint);
     }
 
     public function getBanners() {
