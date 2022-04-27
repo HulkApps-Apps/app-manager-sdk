@@ -26,4 +26,9 @@ class AppManager
 
         return $data->json();
     }
+
+    public function storeCharge($request) {
+        $res = $this->client->post('store-charge', $request->all());
+        return response()->json(json_decode($res->getBody()->getContents()), $res->getStatusCode());
+    }
 }

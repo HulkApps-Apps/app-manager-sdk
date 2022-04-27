@@ -17,34 +17,30 @@ class PlanController extends Controller
 
     public function plans(Request $request) {
 
-        $request->validate([
-            'store_domain' => 'required',
-        ]);
-
-        $storeDomain = $request->get('store_domain');
-
+        $activePlanId = null;
         $tableName = config('app-manager.table_name', 'users');
         $storeFieldName = config('app-manager.store_field_name', 'name');
         $planFieldName = config('app-manager.plan_field_name', 'plan_id');
 
-        $activePlan = DB::table($tableName)->where($storeFieldName, $storeDomain)->pluck($planFieldName)->first();
+        if ($request->has('store_domain')) {
+            $storeDomain = $request->get('store_domain');
+            $activePlanId = DB::table($tableName)->where($storeFieldName, $storeDomain)->pluck($planFieldName)->first();
+        }
 
         $plans = \AppManager::getPlans();
 
         $response = [
             'plans' => $plans,
-            'active_plan_id' => $activePlan
+            'active_plan_id' => $activePlanId
         ];
 
         return response()->json($response);
     }
 
-    public function planCharge(Request $request) {
-        $request->validate([
-            'charge_id' => 'required|number',
-            'plan_id' => 'required|number',
-            'user_id' => 'required|number',
-            'activated_on' => 'required',
-        ]);
+    public function storeCharge(Request $request) {
+
+        $res = \AppManager::storeCharge($request);
+
+        return response()->json($res->getData(), $res->getStatusCode());
     }
 }
