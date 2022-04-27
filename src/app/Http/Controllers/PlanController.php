@@ -15,15 +15,19 @@ class PlanController extends Controller
         return response()->json(['features' => $features]);
     }
 
-    public function plans() {
+    public function plans(Request $request) {
 
-        $storeName = 'demo-anil.myshopify.com';
+        $request->validate([
+            'store_domain' => 'required',
+        ]);
+
+        $storeDomain = $request->get('store_domain');
 
         $tableName = config('app-manager.table_name', 'users');
         $storeFieldName = config('app-manager.store_field_name', 'name');
         $planFieldName = config('app-manager.plan_field_name', 'plan_id');
 
-        $activePlan = DB::table($tableName)->where($storeFieldName, $storeName)->pluck($planFieldName)->first();
+        $activePlan = DB::table($tableName)->where($storeFieldName, $storeDomain)->pluck($planFieldName)->first();
 
         $plans = \AppManager::getPlans();
 
