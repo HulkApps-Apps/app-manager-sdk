@@ -18,7 +18,7 @@ class PlanController extends Controller
     public function plans(Request $request) {
 
         $activePlanId = null;
-        $tableName = config('app-manager.table_name', 'users');
+        $tableName = config('app-manager.shop_table_name', 'users');
         $storeFieldName = config('app-manager.store_field_name', 'name');
         $planFieldName = config('app-manager.plan_field_name', 'plan_id');
 
