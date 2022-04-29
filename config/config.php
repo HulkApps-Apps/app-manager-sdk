@@ -13,7 +13,7 @@ return [
     |
     |-------------------------------------------
     */
-    'api' => env('APP_MANAGER_URI', 'https://app-manager.hulkapps.com/api/v1'),
+    'api' => env('APP_MANAGER_URI', 'https://app-manager.hulkapps.com/api/'),
 
     /*
     |-------------------------------------------
@@ -48,4 +48,43 @@ return [
     |
     |-------------------------------------------
     */
+
+    /*
+    |-------------------------------------------
+    | The Shopify User(Shop) table name
+    |-------------------------------------------
+    |
+    | The table in which user or shop credentials are stored
+    |
+    | Default: users
+    |
+    |-------------------------------------------
+    */
+    'shop_table_name' => env('SHOP_TABLE_NAME', 'users'),
+
+    /*
+    |-------------------------------------------
+    | Shopify's store name field
+    |-------------------------------------------
+    |
+    | Name of the field in which shopify store name is store
+    |
+    | Default: name
+    |
+    |-------------------------------------------
+    */
+    'store_field_name' => env('STORE_FIELD_NAME', 'name'),
+
+    /*
+    |-------------------------------------------
+    | Shopify's plan name field
+    |-------------------------------------------
+    |
+    | Name of the field in which shopify plan is store
+    |
+    | Default: plan_id
+    |
+    |-------------------------------------------
+    */
+    'plan_field_name' => env('PLAN_FIELD_NAME', 'plan_id'),
 ];
