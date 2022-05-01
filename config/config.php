@@ -67,13 +67,26 @@ return [
     | Shopify's store name field
     |-------------------------------------------
     |
-    | Name of the field in which shopify store name is store
+    | Name of the Shopify name field
     |
     | Default: name
     |
     |-------------------------------------------
     */
     'store_field_name' => env('STORE_FIELD_NAME', 'name'),
+
+    /*
+    |-------------------------------------------
+    | Shopify's store token
+    |-------------------------------------------
+    |
+    | Name of the Shopify token field
+    |
+    | Default: password
+    |
+    |-------------------------------------------
+    */
+    'store_token_field_name' => env('STORE_TOKEN_FIELD_NAME', 'password'),
 
     /*
     |-------------------------------------------
