@@ -27,6 +27,13 @@ class AppManager
         return $data->json();
     }
 
+    public function getPlan($request) {
+
+        $data = $this->client->get('plan', $request);
+
+        return $data->json();
+    }
+
     public function storeCharge($request) {
         $res = $this->client->post('store-charge', $request->all());
         return response()->json(json_decode($res->getBody()->getContents()), $res->getStatusCode());

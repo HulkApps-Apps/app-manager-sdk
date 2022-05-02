@@ -37,6 +37,11 @@ class PlanController extends Controller
         return response()->json($response);
     }
 
+    public function plan(Request $request) {
+        $plan = \AppManager::getPlan($request->all());
+        return response()->json($plan);
+    }
+
     public function users(Request $request) {
         $tableName = config('app-manager.shop_table_name', 'users');
         $users = DB::table($tableName)->get();
