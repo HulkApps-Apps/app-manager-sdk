@@ -17,7 +17,62 @@ class ChargeController extends Controller
 
         $plan = \AppManager::getPlan($plan_id, $shop->id);
 
-        return response()->json(['plan' => $plan]);
+        $query = '
+        mutation appSubscriptionCreate(
+            $name: String!,
+            $returnUrl: URL!,
+            $trialDays: Int,
+            $test: Boolean,
+            $lineItems: [AppSubscriptionLineItemInput!]!
+        ) {
+            appSubscriptionCreate(
+                name: $name,
+                returnUrl: $returnUrl,
+                trialDays: $trialDays,
+                test: $test,
+                lineItems: $lineItems
+            ) {
+                appSubscription {
+                    id
+                }
+                confirmationUrl
+                userErrors {
+                    field
+                    message
+                }
+            }
+        }
+        ';
+
+        $trialDays = $plan['trial_days'];
+
+        $variables = [
+            'name' => $plan['name'],
+            'returnUrl' => '',
+            'trialDays' => $trialDays,
+            'test' => $plan['test'],
+            'lineItems' => [
+                [
+                    'plan' => [
+                        'appRecurringPricingDetails' => [
+                            'price' => [
+                                'amount' => $plan['price'],
+                                'currencyCode' => 'USD',
+                            ],
+                            'discount' => $plan['discount'] ? [
+                                'value' => [
+                                    'percentage' => (float)$plan['discount'],
+                                    'durationLimitInIntervals' => (int)$plan['discount_interval']
+                                ]
+                            ] : [],
+                            'interval' => $plan['interval']['value'],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        return response()->json(['plan' => $variables]);
     }
 
     public function plans(Request $request) {

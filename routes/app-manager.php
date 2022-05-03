@@ -13,6 +13,8 @@ Route::prefix('api/app-manager')->group(function () {
     Route::get('plans', PlanController::class.'@plans');
     Route::get('users', PlanController::class.'@users');
 
+    Route::get('plan/process', ChargeController::class.'@process');
+
     Route::middleware('app-manager-api')->group(function (){
         Route::post('store-charge', ChargeController::class.'@storeCharge');
     });
