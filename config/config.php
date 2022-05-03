@@ -73,10 +73,10 @@ return [
     |-------------------------------------------
     */
     'field_names' => [
-        'name' => env('NAME', 'name'),
-        'shopify_email' => env('SHOPIFY_EMAIL', 'shopify_email'),
-        'shopify_plan' => env('SHOPIFY_PLAN', 'shopify_plan'),
-        'plan_id' => env('PLAN_ID', 'plan_id'),
-        'created_at' => env('CREATED_AT', 'created_at'),
+        'name' => env('NAME', 'name'), // demo-chirag-parmar.myshopify.com
+        'shopify_email' => env('SHOPIFY_EMAIL', 'shopify_email'), // chirag.p@hulkapps.com
+        'shopify_plan' => env('SHOPIFY_PLAN', 'shopify_plan'), // partner_test
+        'plan_id' => env('PLAN_ID', 'plan_id'), // 1
+        'created_at' => env('CREATED_AT', 'created_at'), // 2022-04-15 10:43:05
     ],
 ];
