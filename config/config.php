@@ -67,13 +67,26 @@ return [
     | Shopify's store name field
     |-------------------------------------------
     |
-    | Name of the field in which shopify store name is store
+    | Name of the Shopify name field
     |
     | Default: name
     |
     |-------------------------------------------
     */
     'store_field_name' => env('STORE_FIELD_NAME', 'name'),
+
+    /*
+    |-------------------------------------------
+    | Shopify's store token
+    |-------------------------------------------
+    |
+    | Name of the Shopify token field
+    |
+    | Default: password
+    |
+    |-------------------------------------------
+    */
+    'store_token_field_name' => env('STORE_TOKEN_FIELD_NAME', 'password'),
 
     /*
     |-------------------------------------------
@@ -87,4 +100,18 @@ return [
     |-------------------------------------------
     */
     'plan_field_name' => env('PLAN_FIELD_NAME', 'plan_id'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Shopify API Version
+    |--------------------------------------------------------------------------
+    |
+    | This option is for the app's API version string.
+    | Use "YYYY-MM" or "unstable". Refer to Shopify documentation
+    | at https://shopify.dev/api/usage/versioning#release-schedule
+    | for the current stable version.
+    |
+    */
+
+    'shopify_api_version' => env('SHOPIFY_API_VERSION', config('shopify-app.api_version')),
 ];
