@@ -13,7 +13,7 @@ class ChargeController extends Controller
 
 
         $tableName = config('app-manager.shop_table_name', 'users');
-        $storeFieldName = config('app-manager.store_field_name', 'name');
+        $storeFieldName = config('app-manager.field_names.name', 'name');
 
         $shop = DB::table($tableName)->where($storeFieldName, $request->shop)->firstOrFail();
 
