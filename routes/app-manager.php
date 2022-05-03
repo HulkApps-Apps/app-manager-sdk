@@ -1,6 +1,7 @@
 <?php
 
 use HulkApps\AppManager\app\Http\Controllers\BannerController;
+use HulkApps\AppManager\app\Http\Controllers\ChargeController;
 use HulkApps\AppManager\app\Http\Controllers\PlanController;
 use Illuminate\Support\Facades\Route;
 
@@ -8,12 +9,11 @@ Route::prefix('api/app-manager')->group(function () {
 
     Route::get('marketing-banners', BannerController::class.'@index');
 
-    Route::get('plan-features', PlanController::class.'@index');
-    Route::get('plans', PlanController::class.'@plans');
-    Route::get('plan', PlanController::class.'@plan');
+    Route::get('plan-features', ChargeController::class.'@index');
+    Route::get('plans', ChargeController::class.'@plans');
     Route::get('users', PlanController::class.'@users');
 
     Route::middleware('app-manager-api')->group(function (){
-        Route::post('store-charge', PlanController::class.'@storeCharge');
+        Route::post('store-charge', ChargeController::class.'@storeCharge');
     });
 });

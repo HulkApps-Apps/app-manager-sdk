@@ -27,11 +27,11 @@ class AppManager
         return $data->json();
     }
 
-    public function getPlan($request) {
+    public function getPlan($plan_id, $user_id = null) {
 
-        $data = $this->client->get('plan', $request->all());
+        $data = $this->client->get('plan', ['plan_id' => $plan_id, 'user_id' => $user_id]);
 
-        return response()->json(json_decode($data->getBody()->getContents()), $data->getStatusCode());
+        return $data->json();
     }
 
     public function storeCharge($request) {
