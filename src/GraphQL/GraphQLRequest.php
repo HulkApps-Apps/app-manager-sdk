@@ -21,11 +21,11 @@ class GraphQLRequest
 
     public function __construct() {
 
-        $this->apiVersion = config('app_manager.shopify_api_version');
+        $this->apiVersion = config('app-manager.shopify_api_version');
 
-        $this->shopNameField = config('app_manager.store_field_name');
+        $this->shopNameField = config('app-manager.store_field_name');
 
-        $this->shopTokenField = config('app_manager.store_token_field_name');
+        $this->shopTokenField = config('app-manager.store_token_field_name');
     }
 
     static function new(...$args)
@@ -33,24 +33,32 @@ class GraphQLRequest
         return new self(...$args);
     }
 
-    public function setShop($shop) {
+    public function shop($shop) {
 
-        $this->shop = $shop;
+        return tap($this, function ($request) use ($shop) {
+            return $this->shop = $shop;
+        });
     }
 
     public function withAPIVersion($apiVersion) {
 
-        $this->apiVersion = $apiVersion;
+        return tap($this, function ($request) use ($apiVersion) {
+            return $this->apiVersion = $apiVersion;
+        });
     }
 
     public function withParams($params) {
 
-        $this->params = $params;
+        return tap($this, function ($request) use ($params) {
+            return $this->params = $params;
+        });
     }
 
     public function query($query) {
 
-        $this->query = $query;
+        return tap($this, function ($request) use ($query) {
+            return $this->query = $query;
+        });
     }
 
     public function client() {
@@ -61,22 +69,22 @@ class GraphQLRequest
 
         $apiVersion = $this->apiVersion;
 
-        if (empty($shop) && $token) {
+        if (empty($shop) || empty($token)) {
 
             throw new GraphQLException("Missing shop name or token");
         }
 
-        $this->client = Client::withHeaders(['x-shopify-access-token' => $token, 'Accept' => 'application/json'])->baseUri("https://$shop/admin/api/$apiVersion/graphql.json");
+        return Client::withHeaders(['x-shopify-access-token' => $token, 'Accept' => 'application/json'])->baseUri("https://$shop/admin/api/$apiVersion/graphql.json");
     }
 
     public function send() {
 
-        $response = $this->client->post('', array_filter([
+        $response = $this->client()->post('', array_filter([
             'query' => $this->query,
             'variables' => $this->params
         ]))->json();
 
-        if ($response['errors'] !== false) {
+        if (!empty($response['errors']) && $response['errors'] !== false) {
 
             if (is_array($response['errors'])) {
                 $errors = head($response['errors']);
@@ -90,6 +98,6 @@ class GraphQLRequest
             throw new GraphQLException($message);
         }
 
-        return $response['body']['data'];
+        return $response['data'];
     }
 }
