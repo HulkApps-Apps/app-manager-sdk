@@ -40,4 +40,12 @@ class AppManager
 
         return response()->json(json_decode($res->getBody()->getContents()), $res->getStatusCode());
     }
+
+    public function cancelCharge($user_id, $plan_id) {
+        $res = $this->client->post('cancel-charge', [
+            'user_id' => $user_id,
+            'plan_id' => $plan_id
+        ]);
+        return response()->json(json_decode($res->getBody()->getContents()), $res->getStatusCode());
+    }
 }
