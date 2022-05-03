@@ -10,8 +10,6 @@ class ChargeController extends Controller
 {
     public function process(Request $request,$plan_id) {
 
-
-
         $tableName = config('app-manager.shop_table_name', 'users');
         $storeFieldName = config('app-manager.field_names.name', 'name');
 
