@@ -9,8 +9,8 @@ Route::prefix('api/app-manager')->group(function () {
 
     Route::get('marketing-banners', BannerController::class.'@index');
 
-    Route::get('plan-features', ChargeController::class.'@index');
-    Route::get('plans', ChargeController::class.'@plans');
+    Route::get('plan-features', PlanController::class.'@index');
+    Route::get('plans', PlanController::class.'@plans');
     Route::get('users', PlanController::class.'@users');
 
     Route::middleware('app-manager-api')->group(function (){
