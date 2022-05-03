@@ -48,6 +48,7 @@ return [
     |
     |-------------------------------------------
     */
+    'app_key' => '',
 
     /*
     |-------------------------------------------
@@ -64,27 +65,18 @@ return [
 
     /*
     |-------------------------------------------
-    | Shopify's store name field
+    | Shopify users fields
     |-------------------------------------------
     |
-    | Name of the field in which shopify store name is store
-    |
-    | Default: name
+    | Mapped shop user fields to your table
     |
     |-------------------------------------------
     */
-    'store_field_name' => env('STORE_FIELD_NAME', 'name'),
-
-    /*
-    |-------------------------------------------
-    | Shopify's plan name field
-    |-------------------------------------------
-    |
-    | Name of the field in which shopify plan is store
-    |
-    | Default: plan_id
-    |
-    |-------------------------------------------
-    */
-    'plan_field_name' => env('PLAN_FIELD_NAME', 'plan_id'),
+    'field_names' => [
+        'name' => env('NAME', 'name'),
+        'shopify_email' => env('SHOPIFY_EMAIL', 'shopify_email'),
+        'shopify_plan' => env('SHOPIFY_PLAN', 'shopify_plan'),
+        'plan_id' => env('PLAN_ID', 'plan_id'),
+        'created_at' => env('CREATED_AT', 'created_at'),
+    ],
 ];
