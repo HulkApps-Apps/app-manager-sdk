@@ -2,22 +2,28 @@
 
 namespace HulkApps\AppManager\app\Http\Controllers;
 
+use HulkApps\AppManager\Exception\GraphQLException;
+use HulkApps\AppManager\GraphQL\GraphQL;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 
 class ChargeController extends Controller
 {
-    public function process(Request $request,$plan_id) {
+    public function process(Request $request, $plan_id)
+    {
 
         $tableName = config('app-manager.shop_table_name', 'users');
         $storeFieldName = config('app-manager.field_names.name', 'name');
 
-        $shop = DB::table($tableName)->where($storeFieldName, $request->shop)->firstOrFail();
+        $shop = DB::table($tableName)->where($storeFieldName, $request->shop)->first();
 
-        $plan = \AppManager::getPlan($plan_id, $shop->id);
+        if ($shop) {
 
-        $query = '
+            $plan = \AppManager::getPlan($plan_id, $shop->id);
+
+            $query = '
         mutation appSubscriptionCreate(
             $name: String!,
             $returnUrl: URL!,
@@ -44,61 +50,50 @@ class ChargeController extends Controller
         }
         ';
 
-        $trialDays = $plan['trial_days'];
+            $trialDays = $plan['trial_days'];
 
-        $variables = [
-            'name' => $plan['name'],
-            'returnUrl' => '',
-            'trialDays' => $trialDays,
-            'test' => $plan['test'],
-            'lineItems' => [
-                [
-                    'plan' => [
-                        'appRecurringPricingDetails' => [
-                            'price' => [
-                                'amount' => $plan['price'],
-                                'currencyCode' => 'USD',
+            $variables = [
+                'name' => $plan['name'],
+                'returnUrl' => url('api/app-manager/plan/callback'),
+                'trialDays' => $trialDays,
+                'test' => $plan['test'],
+                'lineItems' => [
+                    [
+                        'plan' => [
+                            'appRecurringPricingDetails' => [
+                                'price' => [
+                                    'amount' => $plan['price'],
+                                    'currencyCode' => 'USD',
+                                ],
+                                'discount' => $plan['discount'] ? [
+                                    'value' => [
+                                        'percentage' => (float)$plan['discount'] / 100,
+                                    ],
+                                    'durationLimitInIntervals' => ($plan['discount_interval'] ?? null)
+                                ] : [],
+                                'interval' => $plan['interval']['value'],
                             ],
-                            'discount' => $plan['discount'] ? [
-                                'value' => [
-                                    'percentage' => (float)$plan['discount'],
-                                    'durationLimitInIntervals' => (int)$plan['discount_interval']
-                                ]
-                            ] : [],
-                            'interval' => $plan['interval']['value'],
                         ],
                     ],
                 ],
-            ],
-        ];
+            ];
 
-        return response()->json(['plan' => $variables]);
-    }
+            try {
+                $response = GraphQL::shop(get_object_vars($shop))->query($query)->withParams($variables)->send();
+            } catch (GraphQLException $exception) {
 
-    public function plans(Request $request) {
+                report($exception);
+                return response()->json(['error' => $exception->getMessage()], $exception->getCode());
+            }
 
-        $activePlanId = null;
-        $tableName = config('app-manager.shop_table_name', 'users');
-        $storeFieldName = config('app-manager.store_field_name', 'name');
-        $planFieldName = config('app-manager.plan_field_name', 'plan_id');
-
-        if ($request->has('store_domain')) {
-            $storeDomain = $request->get('store_domain');
-            $activePlanId = DB::table($tableName)->where($storeFieldName, $storeDomain)->pluck($planFieldName)->first();
+            return response()->json(['redirect_url' => $response['appSubscriptionCreate']['confirmationUrl']]);
         }
 
-        $plans = \AppManager::getPlans();
-
-        $response = [
-            'plans' => $plans,
-            'active_plan_id' => $activePlanId
-        ];
-
-        return response()->json($response);
+        throw new ModelNotFoundException("Shop $request->shop not found");
     }
 
-    public function storeCharge(Request $request) {
-
+    public function callback(Request $request)
+    {
         $res = \AppManager::storeCharge($request);
 
         return response()->json($res->getData(), $res->getStatusCode());

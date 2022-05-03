@@ -39,6 +39,7 @@ class PlanController extends Controller
     }
 
     public function users(Request $request) {
+
         $tableName = config('app-manager.shop_table_name', 'users');
         $shopify_fields = config('app-manager.field_names');
         $users = DB::table($tableName)->get();
@@ -51,13 +52,7 @@ class PlanController extends Controller
             }
             return $user;
         });
+
         return response()->json($users, 200);
-    }
-
-    public function storeCharge(Request $request) {
-
-        $res = \AppManager::storeCharge($request);
-
-        return response()->json($res->getData(), $res->getStatusCode());
     }
 }
