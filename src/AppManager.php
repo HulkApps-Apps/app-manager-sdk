@@ -29,13 +29,15 @@ class AppManager
 
     public function getPlan($request) {
 
-        $data = $this->client->get('plan', $request);
+        $data = $this->client->get('plan', $request->all());
 
-        return $data->json();
+        return response()->json(json_decode($data->getBody()->getContents()), $data->getStatusCode());
     }
 
     public function storeCharge($request) {
+
         $res = $this->client->post('store-charge', $request->all());
+
         return response()->json(json_decode($res->getBody()->getContents()), $res->getStatusCode());
     }
 }
