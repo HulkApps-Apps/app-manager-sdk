@@ -8,7 +8,7 @@ trait HasPlan
 {
     public function hasPlan() {
         if ($this->plan_id) {
-            return true;
+            return $this->plan_id;
         }
         return false;
     }
