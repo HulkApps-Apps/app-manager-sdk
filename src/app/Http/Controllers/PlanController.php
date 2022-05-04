@@ -18,21 +18,26 @@ class PlanController extends Controller
 
     public function plans(Request $request) {
 
-        $activePlanId = null;
+        $activePlanId = $shopify_plan = $plan = null;
         $tableName = config('app-manager.shop_table_name', 'users');
         $storeFieldName = config('app-manager.field_names.name', 'name');
         $planFieldName = config('app-manager.field_names.plan_id', 'plan_id');
-
-        if ($request->has('store_domain')) {
-            $storeDomain = $request->get('store_domain');
-            $activePlanId = DB::table($tableName)->where($storeFieldName, $storeDomain)->pluck($planFieldName)->first();
-        }
+        $shopifyPlanFieldName = config('app-manager.field_names.shopify_plan', 'shopify_plan');
 
         $plans = \AppManager::getPlans();
 
+        if ($request->has('shop_domain')) {
+            $shopDomain = $request->get('shop_domain');
+            $userData = DB::table($tableName)->where($storeFieldName, $shopDomain)->get();
+            $shopify_plan = collect($userData)->pluck($shopifyPlanFieldName)->first();
+            $activePlanId = collect($userData)->pluck($planFieldName)->first();
+            $plan = collect($plans)->where('id', $activePlanId)->first();
+        }
+
         $response = [
             'plans' => $plans,
-            'active_plan_id' => $activePlanId
+            'shopify_plan' => $shopify_plan,
+            'plan' => $plan,
         ];
 
         return response()->json($response);
