@@ -2,38 +2,25 @@
 
 namespace HulkApps\AppManager\app\Traits;
 
+use HulkApps\AppManager\Exception\MissingPlanException;
 use Illuminate\Http\Request;
 
 trait HasPlan
 {
     public function hasPlan() {
-        if ($this->plan_id) {
-            return $this->plan_id;
-        }
-        return false;
+        return $this->plan_id ?? false;
     }
 
     public function planFeatures() {
         $planId = $this->plan_id;
+
         if (!$planId) {
-            return [
-                'error' => true,
-                'message' => 'Plan Id not found',
-            ];
+            throw new MissingPlanException("Plan not found");
         }
 
-        $Request = new Request();
-        $Request->request->add(['plan_id' => $planId]);
-        $response = \AppManager::getPlan($Request->request);
-        if ($response->getStatusCode() != 200) {
-            return [
-                'error' => true,
-                'message' => $response->content(),
-            ];
-        }
-        $planData = json_decode($response->getContent(), true);
+        $planData = \AppManager::getPlan($planId);
 
-        if (count($planData['features']) <= 0) {
+        if (empty($planData['features'] ?? [])) {
             return [];
         }
 
@@ -47,28 +34,28 @@ trait HasPlan
             }
             $allFeatures[$index]['value'] = $featuresByPlan[$feature['uuid']];
         }
+
         return array_values($allFeatures);
     }
 
     public function hasFeature($slug, $value = true) {
-        if (empty($slug)) {
-            return response()->json(['message' => 'Slug is required'], 422);
-        }
+
         $response = $this->planFeatures();
         if (isset($response['error']) && $response['error']) {
-            return $response;
+            throw new \Exception($response);
         }
-        return collect($response)->where('slug', $slug)->where('value', $value)->count() === 0 ? false : true;
+
+        return !(collect($response)->where('slug', $slug)->where('value', $value)->count() === 0);
     }
 
     public function getFeature($slug) {
-        if (empty($slug)) {
-            return response()->json(['message' => 'Slug is required'], 422);
-        }
+
         $response = $this->planFeatures();
+
         if (isset($response['error']) && $response['error']) {
             return $response;
         }
+
         return collect($response)->where('slug', $slug)->first();
     }
 }
