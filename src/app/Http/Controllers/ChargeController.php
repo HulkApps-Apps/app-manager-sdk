@@ -2,12 +2,14 @@
 
 namespace HulkApps\AppManager\app\Http\Controllers;
 
+use HulkApps\AppManager\Exception\ChargeException;
 use HulkApps\AppManager\Exception\GraphQLException;
 use HulkApps\AppManager\GraphQL\GraphQL;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Redirect;
 
 class ChargeController extends Controller
 {
@@ -94,8 +96,12 @@ class ChargeController extends Controller
 
     public function callback(Request $request)
     {
-        $res = \AppManager::storeCharge($request);
+        try {
+            \AppManager::storeCharge($request->all());
+        } catch (ChargeException $chargeException) {
+            report($chargeException);
+        }
 
-        return response()->json($res->getData(), $res->getStatusCode());
+        return Redirect::route('home');
     }
 }
