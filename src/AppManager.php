@@ -47,10 +47,8 @@ class AppManager
         return response()->json(json_decode($res->getBody()->getContents()), $res->getStatusCode());
     }
 
-    public function getRemainingDays($plan_id, $user_id) {
+    public function getRemainingDays($shop_domain) {
 
-        $data = $this->client->get('get-remaining-days', ['plan_id' => $plan_id, 'user_id' => $user_id]);
-
-        return $data->json();
+        return $this->client->get('get-remaining-days', ['shop_domain' => $shop_domain]);
     }
 }

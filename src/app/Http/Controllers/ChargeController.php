@@ -2,6 +2,7 @@
 
 namespace HulkApps\AppManager\app\Http\Controllers;
 
+use Carbon\Carbon;
 use HulkApps\AppManager\Exception\ChargeException;
 use HulkApps\AppManager\Exception\GraphQLException;
 use HulkApps\AppManager\GraphQL\GraphQL;
@@ -52,11 +53,17 @@ class ChargeController extends Controller
         }
         ';
 
-            $trialDays = $plan['trial_days'];
+            $trialDays = $plan['trial_days'] ?? 0;
+            $requestData = ['shop' => $shop->$storeFieldName, 'timestamp' => now()->unix() * 1000, 'plan' => $plan_id];
+
+            if ($shop->plan_id && $trialDays) {
+
+                $trialDays = \AppManager::getRemainingDays($shop->$storeFieldName);
+            }
 
             $variables = [
                 'name' => $plan['name'],
-                'returnUrl' => url('api/app-manager/plan/callback'),
+                'returnUrl' => route('app-manager.plan.callback')."?".http_build_query($requestData, '', '&', PHP_QUERY_RFC3986),
                 'trialDays' => $trialDays,
                 'test' => $plan['test'],
                 'lineItems' => [
@@ -96,6 +103,17 @@ class ChargeController extends Controller
 
     public function callback(Request $request)
     {
+
+        $tableName = config('app-manager.shop_table_name', 'users');
+        $storeFieldName = config('app-manager.field_names.name', 'name');
+        $storeFieldName = config('app-manager.field_names.name', 'name');
+
+        $shop = DB::table($tableName)->where($storeFieldName, $request->shop)->first();
+
+
+//        $charge = Client::withHeaders(["X-Shopify-Access-Token" => $shop->])->get("/admin/{$typeString}s/{$chargeRef->toNative()}/activate.json")->json()
+
+
         try {
             \AppManager::storeCharge($request->all());
         } catch (ChargeException $chargeException) {
