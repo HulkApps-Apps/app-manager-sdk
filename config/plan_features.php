@@ -6,6 +6,7 @@
  * Feature list
  *
  * Values type : integer, boolean, string
+ * Format: percentage, count, string
  * */
 return [
   [
@@ -13,6 +14,7 @@ return [
       "name" => "Features 1",
       "slug" => "feature-1",
       "description" => "Feature Description",
-      "value_type" => "integer"
+      "value_type" => "integer",
+      "format" => "count"
   ],
 ];

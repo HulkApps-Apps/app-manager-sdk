@@ -27,23 +27,21 @@ class AppManager
         return $data->json();
     }
 
-    public function getPlan($plan_id, $user_id = null) {
+    public function getPlan($plan_id, $shopify_domain = null) {
 
-        $data = $this->client->get('plan', ['plan_id' => $plan_id, 'user_id' => $user_id]);
+        $data = $this->client->get('plan', ['plan_id' => $plan_id, 'shopify_domain' => $shopify_domain]);
 
         return $data->json();
     }
 
-    public function storeCharge($request) {
+    public function storeCharge($payload) {
 
-        $res = $this->client->post('store-charge', $request->all());
-
-        return response()->json(json_decode($res->getBody()->getContents()), $res->getStatusCode());
+        return $this->client->post('store-charge', $payload)->json();
     }
 
-    public function cancelCharge($user_id, $plan_id) {
+    public function cancelCharge($shopify_domain, $plan_id) {
         $res = $this->client->post('cancel-charge', [
-            'user_id' => $user_id,
+            'shopify_domain' => $shopify_domain,
             'plan_id' => $plan_id
         ]);
         return response()->json(json_decode($res->getBody()->getContents()), $res->getStatusCode());
