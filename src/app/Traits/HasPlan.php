@@ -58,4 +58,15 @@ trait HasPlan
 
         return collect($response)->where('slug', $slug)->first();
     }
+
+    public function getRemainingDays() {
+        $planId = $this->plan_id;
+        $userId = $this->id;
+
+        if (!$planId) {
+            throw new MissingPlanException("Plan not found");
+        }
+
+        return \AppManager::getRemainingDays($planId, $userId);
+    }
 }
