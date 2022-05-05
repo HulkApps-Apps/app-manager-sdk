@@ -49,6 +49,6 @@ class AppManager
 
     public function getRemainingDays($shop_domain) {
 
-        return $this->client->get('get-remaining-days', ['shop_domain' => $shop_domain]);
+        return $this->client->get('get-remaining-days', ['shop_domain' => $shop_domain])->json();
     }
 }
