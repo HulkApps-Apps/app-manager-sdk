@@ -2,6 +2,8 @@
 
 namespace HulkApps\AppManager\app\Http\Controllers;
 
+use Carbon\Carbon;
+use HulkApps\AppManager\Client\Client;
 use HulkApps\AppManager\Exception\ChargeException;
 use HulkApps\AppManager\Exception\GraphQLException;
 use HulkApps\AppManager\GraphQL\GraphQL;
@@ -17,9 +19,10 @@ class ChargeController extends Controller
     {
 
         $tableName = config('app-manager.shop_table_name', 'users');
-        $storeFieldName = config('app-manager.field_names.name', 'name');
+        $storeNameField = config('app-manager.field_names.name', 'name');
+        $storePlanField = config('app-manager.field_names.plan_id', 'plan_id');
 
-        $shop = DB::table($tableName)->where($storeFieldName, $request->shop)->first();
+        $shop = DB::table($tableName)->where($storeNameField, $request->shop)->first();
 
         if ($shop) {
 
@@ -52,29 +55,39 @@ class ChargeController extends Controller
         }
         ';
 
-            $trialDays = $plan['trial_days'];
+            $trialDays = $plan['trial_days'] ?? 0;
+            $requestData = ['shop' => $shop->$storeNameField, 'timestamp' => now()->unix() * 1000, 'plan' => $plan_id];
+
+            if (!empty($shop->$storePlanField) && $trialDays) {
+
+                $remaining = \AppManager::getRemainingDays($shop->$storeNameField);
+
+                $trialDays = $remaining !== null ? $remaining : $trialDays;
+            }
+
+            $discount_type = $plan['discount_type'] ?? "percentage";
 
             $variables = [
                 'name' => $plan['name'],
-                'returnUrl' => url('api/app-manager/plan/callback'),
+                'returnUrl' => route('app-manager.plan.callback')."?".http_build_query($requestData, '', '&', PHP_QUERY_RFC3986),
                 'trialDays' => $trialDays,
                 'test' => $plan['test'],
                 'lineItems' => [
                     [
                         'plan' => [
-                            'appRecurringPricingDetails' => [
+                            'appRecurringPricingDetails' => array_filter([
                                 'price' => [
                                     'amount' => $plan['price'],
                                     'currencyCode' => 'USD',
                                 ],
                                 'discount' => $plan['discount'] ? [
                                     'value' => [
-                                        'percentage' => (float)$plan['discount'] / 100,
+                                        $discount_type => $discount_type === "percentage" ? (float)$plan['discount'] / 100 : $plan['discount'],
                                     ],
                                     'durationLimitInIntervals' => ($plan['discount_interval'] ?? null)
                                 ] : [],
                                 'interval' => $plan['interval']['value'],
-                            ],
+                            ]),
                         ],
                     ],
                 ],
@@ -85,7 +98,7 @@ class ChargeController extends Controller
             } catch (GraphQLException $exception) {
 
                 report($exception);
-                return response()->json(['error' => $exception->getMessage()], $exception->getCode());
+                return response()->json(['error' => $exception->getMessage()], $exception->getCode()?:500);
             }
 
             return response()->json(['redirect_url' => $response['appSubscriptionCreate']['confirmationUrl']]);
@@ -96,12 +109,42 @@ class ChargeController extends Controller
 
     public function callback(Request $request)
     {
-        try {
-            \AppManager::storeCharge($request->all());
-        } catch (ChargeException $chargeException) {
-            report($chargeException);
-        }
+        $tableName = config('app-manager.shop_table_name', 'users');
+        $storeName = config('app-manager.field_names.name', 'name');
+        $storeToken = config('app-manager.field_names.shopify_token');
+        $storePlanField = config('app-manager.field_names.plan_id', 'plan_id');
 
-        return Redirect::route('home');
+        $shop = DB::table($tableName)->where($storeName, $request->shop)->first();
+        $apiVersion = config('app-manager.shopify_api_version');
+
+        $charge = Client::withHeaders(["X-Shopify-Access-Token" => $shop->$storeToken])
+            ->get("https://{$shop->$storeName}/admin/api/$apiVersion/recurring_application_charges/{$request->charge_id}.json")->json();
+
+        $plan = \AppManager::getPlan($request->plan, $shop->id);
+
+        if (!empty($charge['recurring_application_charge'])) {
+
+            $charge = $charge['recurring_application_charge'];
+            $charge['charge_id']  = $charge['id'];
+            $charge['type'] = 'recurring';
+            $charge['plan_id'] = $request->plan;
+            $charge['shop_domain'] = $request->shop;
+            $charge['interval'] = $plan['interval']['value'];
+
+            if (!empty($shop->$storePlanField)) {
+
+                \AppManager::cancelCharge($request->shop, $shop->$storePlanField);
+            }
+
+            $data = \AppManager::storeCharge($charge);
+
+            if ($data['message'] === "success") {
+
+                DB::table($tableName)->where($storeName, $request->shop)->update([$storePlanField => $request->plan]);
+            }
+        } else throw new ChargeException("Invalid charge");
+
+
+        return \redirect()->route('home',['shop' => $shop->$storeName]);
     }
 }
