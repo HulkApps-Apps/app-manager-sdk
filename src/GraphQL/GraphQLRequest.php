@@ -23,9 +23,9 @@ class GraphQLRequest
 
         $this->apiVersion = config('app-manager.shopify_api_version');
 
-        $this->shopNameField = config('app-manager.store_field_name');
+        $this->shopNameField = config('app-manager.field_names.name');
 
-        $this->shopTokenField = config('app-manager.store_token_field_name');
+        $this->shopTokenField = config('app-manager.field_names.shopify_token');
     }
 
     static function new(...$args)
