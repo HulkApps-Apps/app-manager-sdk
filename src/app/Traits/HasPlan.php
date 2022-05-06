@@ -56,7 +56,14 @@ trait HasPlan
             return $response;
         }
 
-        return collect($response)->where('slug', $slug)->first();
+        $feature = collect($response)->where('slug', $slug)->first();
+
+        if ($feature) {
+            settype($feature['value'], $feature['value_type']);
+            return $feature['value'];
+        } else {
+            return null;
+        }
     }
 
     public function getRemainingDays() {
