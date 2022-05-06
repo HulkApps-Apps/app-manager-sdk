@@ -65,6 +65,8 @@ class ChargeController extends Controller
                 $trialDays = $remaining !== null ? $remaining : $trialDays;
             }
 
+            $discount_type = $plan['discount_type'] ?? "percentage";
+
             $variables = [
                 'name' => $plan['name'],
                 'returnUrl' => route('app-manager.plan.callback')."?".http_build_query($requestData, '', '&', PHP_QUERY_RFC3986),
@@ -73,19 +75,19 @@ class ChargeController extends Controller
                 'lineItems' => [
                     [
                         'plan' => [
-                            'appRecurringPricingDetails' => [
+                            'appRecurringPricingDetails' => array_filter([
                                 'price' => [
                                     'amount' => $plan['price'],
                                     'currencyCode' => 'USD',
                                 ],
                                 'discount' => $plan['discount'] ? [
                                     'value' => [
-                                        'percentage' => (float)$plan['discount'] / 100,
+                                        $discount_type => $discount_type === "percentage" ? (float)$plan['discount'] / 100 : $plan['discount'],
                                     ],
                                     'durationLimitInIntervals' => ($plan['discount_interval'] ?? null)
                                 ] : [],
                                 'interval' => $plan['interval']['value'],
-                            ],
+                            ]),
                         ],
                     ],
                 ],
@@ -96,7 +98,7 @@ class ChargeController extends Controller
             } catch (GraphQLException $exception) {
 
                 report($exception);
-                return response()->json(['error' => $exception->getMessage()], $exception->getCode());
+                return response()->json(['error' => $exception->getMessage()], $exception->getCode()?:500);
             }
 
             return response()->json(['redirect_url' => $response['appSubscriptionCreate']['confirmationUrl']]);
@@ -118,6 +120,8 @@ class ChargeController extends Controller
         $charge = Client::withHeaders(["X-Shopify-Access-Token" => $shop->$storeToken])
             ->get("https://{$shop->$storeName}/admin/api/$apiVersion/recurring_application_charges/{$request->charge_id}.json")->json();
 
+        $plan = \AppManager::getPlan($request->plan, $shop->id);
+
         if (!empty($charge['recurring_application_charge'])) {
 
             $charge = $charge['recurring_application_charge'];
@@ -125,6 +129,7 @@ class ChargeController extends Controller
             $charge['type'] = 'recurring';
             $charge['plan_id'] = $request->plan;
             $charge['shop_domain'] = $request->shop;
+            $charge['interval'] = $plan['interval']['value'];
 
             if (!empty($shop->$storePlanField)) {
 
@@ -137,10 +142,9 @@ class ChargeController extends Controller
 
                 DB::table($tableName)->where($storeName, $request->shop)->update([$storePlanField => $request->plan]);
             }
-
         } else throw new ChargeException("Invalid charge");
 
 
-        return Redirect::route('home');
+        return \redirect()->route('home',['shop' => $shop->$storeName]);
     }
 }
