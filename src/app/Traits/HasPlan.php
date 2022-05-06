@@ -24,37 +24,17 @@ trait HasPlan
             return [];
         }
 
-        $featuresByPlan = collect($planData['features'])->pluck('value', 'feature_id')->toArray();
-        $allFeatures = config('plan_features');
-
-        foreach ($allFeatures as $index => $feature) {
-            if (!isset($featuresByPlan[$feature['uuid']])) {
-                unset($allFeatures[$index]);
-                continue;
-            }
-            $allFeatures[$index]['value'] = $featuresByPlan[$feature['uuid']];
-        }
-
-        return array_values($allFeatures);
+        $featuresByPlan = collect($planData['features'])->pluck('value', 'feature_id')->keys()->toArray();
+        return collect(config('plan_features'))->whereIn('uuid', $featuresByPlan)->toArray();
     }
 
     public function hasFeature($slug) {
-
-        $response = $this->planFeatures();
-        if (isset($response['error']) && $response['error']) {
-            throw new \Exception($response);
-        }
-
-        return collect($response)->where('slug', $slug)->count() > 0;
+        return collect($this->planFeatures())->where('slug', $slug)->count() > 0;
     }
 
     public function getFeature($slug) {
 
         $response = $this->planFeatures();
-
-        if (isset($response['error']) && $response['error']) {
-            return $response;
-        }
 
         $feature = collect($response)->where('slug', $slug)->first();
 
