@@ -22,7 +22,7 @@ class ChargeController extends Controller
         $storeNameField = config('app-manager.field_names.name', 'name');
         $storePlanField = config('app-manager.field_names.plan_id', 'plan_id');
 
-        $shop = DB::table($tableName)->where($storeNameField, $request->shop)->first();
+        $shop = DB::table($tableName)->where($storeNameField, $request->$storeNameField)->first();
 
         if ($shop) {
 
