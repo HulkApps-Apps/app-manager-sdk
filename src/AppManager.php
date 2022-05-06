@@ -27,9 +27,9 @@ class AppManager
         return $data->json();
     }
 
-    public function getPlan($plan_id, $shopify_domain = null) {
+    public function getPlan($plan_id, $shop_domain = null) {
 
-        $data = $this->client->get('plan', ['plan_id' => $plan_id, 'shopify_domain' => $shopify_domain]);
+        $data = $this->client->get('plan', ['plan_id' => $plan_id, 'shop_domain' => $shop_domain]);
 
         return $data->json();
     }
