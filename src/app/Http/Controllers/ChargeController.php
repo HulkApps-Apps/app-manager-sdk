@@ -26,7 +26,7 @@ class ChargeController extends Controller
 
         if ($shop) {
 
-            $plan = \AppManager::getPlan($plan_id, $shop->id);
+            $plan = \AppManager::getPlan($plan_id, $request->shop);
 
             $query = '
         mutation appSubscriptionCreate(
