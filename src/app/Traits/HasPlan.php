@@ -38,14 +38,14 @@ trait HasPlan
         return array_values($allFeatures);
     }
 
-    public function hasFeature($slug, $value = true) {
+    public function hasFeature($slug) {
 
         $response = $this->planFeatures();
         if (isset($response['error']) && $response['error']) {
             throw new \Exception($response);
         }
 
-        return !(collect($response)->where('slug', $slug)->where('value', $value)->count() === 0);
+        return collect($response)->where('slug', $slug)->count() > 0;
     }
 
     public function getFeature($slug) {
