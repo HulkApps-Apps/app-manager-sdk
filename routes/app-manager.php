@@ -13,6 +13,7 @@ Route::prefix('api/app-manager')->as('app-manager.')->group(function () {
     Route::get('plans', PlanController::class.'@plans');
     Route::get('users', PlanController::class.'@users');
     Route::get('active-without-plan', PlanController::class.'@activeWithoutPlan');
+    Route::post('burst-cache', PlanController::class.'@burstCache');
 
     Route::get('plan/process/{plan_id}', ChargeController::class.'@process');
     Route::get('plan/process/callback', ChargeController::class.'@callback')->name('plan.callback');

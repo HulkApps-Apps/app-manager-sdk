@@ -51,7 +51,7 @@ class PlanController extends Controller
 
         $tableName = config('app-manager.shop_table_name', 'users');
         $shopify_fields = config('app-manager.field_names');
-        $users = DB::table($tableName)->paginate(2);
+        $users = DB::table($tableName)->paginate(10);
         $users->getCollection()->transform(function ($user) use ($shopify_fields) {
             foreach ($shopify_fields as $key => $shopify_field) {
                 if ($key !== $shopify_field) {
@@ -60,15 +60,6 @@ class PlanController extends Controller
             }
             return $user;
         });
-
-        /*$users->map(function ($user) use ($shopify_fields) {
-            foreach ($shopify_fields as $key => $shopify_field) {
-                if ($key !== $shopify_field) {
-                    $user->{$key} = $user->{$shopify_field};
-                }
-            }
-            return $usersData;
-        });*/
 
         return response()->json($users, 200);
     }
@@ -90,5 +81,12 @@ class PlanController extends Controller
             return response()->json(['status' => true]);
         }
         return response()->json(['status' => false], 422);
+    }
+
+    public function burstCache(Request $request) {
+        $type = $request->get('type');
+
+        // burst cache logic
+
     }
 }
