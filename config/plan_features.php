@@ -15,6 +15,7 @@ return [
       "slug" => "feature-1",
       "description" => "Feature Description",
       "value_type" => "integer",
-      "format" => "count"
+      "format" => "count",
+      "display_order" => 1
   ],
 ];
