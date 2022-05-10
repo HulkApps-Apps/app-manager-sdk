@@ -57,4 +57,12 @@ class AppManager
 
         return $data->json();
     }
+
+    public function getCharge($shop_domain) {
+
+        $data = $this->client->get('get-charge', [
+            'shop_domain' => $shop_domain,
+        ]);
+        return $data->json();
+    }
 }
