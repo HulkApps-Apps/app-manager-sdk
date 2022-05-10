@@ -13,19 +13,13 @@ trait HasPlan
         if (!$this->plan_id) {
             return false;
         }
-        $planData = \AppManager::getPlan($this->plan_id);
-        $trialDays = $planData['trial_days'] ?? null;
-        $tableName = config('app-manager.shop_table_name', 'users');
-        $shopify_fields = config('app-manager.field_names');
-        $trial_activated_at = DB::table($tableName)->where('id', $this->id)->pluck($shopify_fields['trial_activated_at'])->first();
-        if ($trial_activated_at && now()->diffInDays(Carbon::parse($trial_activated_at)) < $trialDays ) {
-            $activeCharge = \AppManager::getCharge($this->{$shopify_fields['name']});
-            if ($activeCharge && now()->diffInDays($activeCharge['trial_ends_on']) < $activeCharge['trial_days']) {
-                return true;
-            }
-            return false;
+        $remainingDays = $this->getRemainingDays();
+        if ($remainingDays > 0) {
+            return true;
         }
-        return false;
+        $shopify_fields = config('app-manager.field_names');
+        $activeCharge = \AppManager::getCharge($this->{$shopify_fields['name']});
+        return $activeCharge ? true : false;
     }
 
     public function planFeatures() {
