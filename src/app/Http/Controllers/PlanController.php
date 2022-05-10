@@ -25,7 +25,7 @@ class PlanController extends Controller
         $planFieldName = config('app-manager.field_names.plan_id', 'plan_id');
         $shopifyPlanFieldName = config('app-manager.field_names.shopify_plan', 'shopify_plan');
 
-        $cacheKey = $request->has('shop_domain') ? 'plans-'.$request->get('shop_domain') : 'all-plans';
+        $cacheKey = $request->has('shop_domain') ? 'app-manager.plans-'.$request->get('shop_domain') : 'app-manager.all-plans';
         $response = Cache::get($cacheKey, function () use ($request, $shopTableName, $storeFieldName, $planFieldName, $shopifyPlanFieldName, $cacheKey) {
             $shopify_plan = $plan = null;
             $plans = \AppManager::getPlans();
@@ -55,10 +55,13 @@ class PlanController extends Controller
     }
 
     public function users(Request $request) {
-
+        $search = $request->get('search') ?? null;
         $tableName = config('app-manager.shop_table_name', 'users');
         $shopify_fields = config('app-manager.field_names');
-        $users = DB::table($tableName)->paginate(10);
+        $users = DB::table($tableName)->when($search, function ($q) use ($shopify_fields, $search) {
+            return $q->where(($shopify_fields['name'] ?? 'name'), 'like', '%'.$search.'%')
+                ->orWhere(($shopify_fields['shopify_email'] ?? 'shopify_email'), 'like', '%'.$search.'%');
+        })->paginate(10);
         $users->getCollection()->transform(function ($user) use ($shopify_fields) {
             foreach ($shopify_fields as $key => $shopify_field) {
                 if ($key !== $shopify_field) {
@@ -93,7 +96,7 @@ class PlanController extends Controller
     public function burstCache(Request $request) {
         $type = $request->get('type');
         if ($type === 'plans') {
-            Cache::tags('app-manager-plans')->flush();
+            Cache::forget('app-manager.*');
         }
         elseif ($type === 'banners') {
             Cache::tags('app-manager-banners')->flush();
