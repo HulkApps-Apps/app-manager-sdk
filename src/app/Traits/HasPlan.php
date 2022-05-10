@@ -60,13 +60,12 @@ trait HasPlan
     }
 
     public function getRemainingDays() {
-        $planId = $this->plan_id;
-        $userId = $this->id;
+        $shopify_fields = config('app-manager.field_names');
+        $shop_domain = $this->{$shopify_fields['name']};
 
-        if (!$planId) {
-            throw new MissingPlanException("Plan not found");
-        }
+        $trial_activated_at = $this->{$shopify_fields['trial_activated_at']};
+        $plan_id = $this->{$shopify_fields['plan_id']};
 
-        return \AppManager::getRemainingDays($planId, $userId);
+        return \AppManager::getRemainingDays($shop_domain, $trial_activated_at, $plan_id);
     }
 }

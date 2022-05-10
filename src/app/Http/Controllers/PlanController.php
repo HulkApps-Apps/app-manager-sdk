@@ -5,6 +5,7 @@ namespace HulkApps\AppManager\app\Http\Controllers;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -19,39 +20,48 @@ class PlanController extends Controller
 
     public function plans(Request $request) {
 
-        $activePlanId = $shopify_plan = $plan = null;
         $shopTableName = config('app-manager.shop_table_name', 'users');
         $storeFieldName = config('app-manager.field_names.name', 'name');
         $planFieldName = config('app-manager.field_names.plan_id', 'plan_id');
         $shopifyPlanFieldName = config('app-manager.field_names.shopify_plan', 'shopify_plan');
 
-        $plans = \AppManager::getPlans();
+        $cacheKey = $request->has('shop_domain') ? 'app-manager.plans-'.$request->get('shop_domain') : 'app-manager.all-plans';
+        $response = Cache::get($cacheKey, function () use ($request, $shopTableName, $storeFieldName, $planFieldName, $shopifyPlanFieldName, $cacheKey) {
+            $shopify_plan = $plan = null;
+            $plans = \AppManager::getPlans();
 
-        if ($request->has('shop_domain')) {
-            $shopDomain = $request->get('shop_domain');
-            $userData = DB::table($shopTableName)->where($storeFieldName, $shopDomain)->get();
-            $shopify_plan = collect($userData)->pluck($shopifyPlanFieldName)->first();
-            $activePlanId = collect($userData)->pluck($planFieldName)->first();
-            $plan = collect($plans)->where('id', $activePlanId)->first();
-        }
+            if ($request->has('shop_domain')) {
+                $shopDomain = $request->get('shop_domain');
+                $userData = DB::table($shopTableName)->where($storeFieldName, $shopDomain)->get();
+                $shopify_plan = collect($userData)->pluck($shopifyPlanFieldName)->first();
+                $activePlanId = collect($userData)->pluck($planFieldName)->first();
+                $plan = collect($plans)->where('id', $activePlanId)->first();
+            }
 
-        $defaultPlanId = collect($plans)->where('interval', 'EVERY_30_DAYS')->sortByDesc('price')->pluck('id')->first();
+            $defaultPlanId = collect($plans)->where('interval', 'EVERY_30_DAYS')->sortByDesc('price')->pluck('id')->first();
 
-        $response = [
-            'plans' => $plans,
-            'shopify_plan' => $shopify_plan,
-            'plan' => $plan,
-            'default_plan_id' => $defaultPlanId
-        ];
+            $response = [
+                'plans' => $plans,
+                'shopify_plan' => $shopify_plan,
+                'plan' => $plan,
+                'default_plan_id' => $defaultPlanId
+            ];
+//			Cache::tags('app-manager-plans')->put($cacheKey, Carbon::now()->addDay());
+            Cache::put($cacheKey, $response, Carbon::now()->addDay());
+            return $response;
+        });
 
         return response()->json($response);
     }
 
     public function users(Request $request) {
-
+        $search = $request->get('search') ?? null;
         $tableName = config('app-manager.shop_table_name', 'users');
         $shopify_fields = config('app-manager.field_names');
-        $users = DB::table($tableName)->paginate(10);
+        $users = DB::table($tableName)->when($search, function ($q) use ($shopify_fields, $search) {
+            return $q->where(($shopify_fields['name'] ?? 'name'), 'like', '%'.$search.'%')
+                ->orWhere(($shopify_fields['shopify_email'] ?? 'shopify_email'), 'like', '%'.$search.'%');
+        })->paginate(10);
         $users->getCollection()->transform(function ($user) use ($shopify_fields) {
             foreach ($shopify_fields as $key => $shopify_field) {
                 if ($key !== $shopify_field) {
@@ -85,8 +95,11 @@ class PlanController extends Controller
 
     public function burstCache(Request $request) {
         $type = $request->get('type');
-
-        // burst cache logic
-
+        if ($type === 'plans') {
+            Cache::forget('app-manager.*');
+        }
+        elseif ($type === 'banners') {
+            Cache::tags('app-manager-banners')->flush();
+        }
     }
 }

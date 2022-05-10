@@ -47,8 +47,14 @@ class AppManager
         ])->json();
     }
 
-    public function getRemainingDays($shop_domain) {
+    public function getRemainingDays($shop_domain, $trial_activated_at ,$plan_id) {
 
-        return $this->client->get('get-remaining-days', ['shop_domain' => $shop_domain])->json();
+        $data = $this->client->get('get-remaining-days', [
+            'shop_domain' => $shop_domain,
+            'trial_activated_at' => $trial_activated_at,
+            'plan_id' => $plan_id
+        ]);
+
+        return $data->json();
     }
 }
