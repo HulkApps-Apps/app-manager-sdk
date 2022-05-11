@@ -12,7 +12,7 @@ Route::prefix('api/app-manager')->as('app-manager.')->group(function () {
     Route::get('plan-features', PlanController::class.'@index');
     Route::get('plans', PlanController::class.'@plans');
     Route::get('users', PlanController::class.'@users');
-    Route::get('active-without-plan', PlanController::class.'@activeWithoutPlan');
+    Route::post('active-without-plan', PlanController::class.'@activeWithoutPlan');
     Route::post('burst-cache', PlanController::class.'@burstCache');
 
     Route::get('plan/process/{plan_id}', ChargeController::class.'@process');
