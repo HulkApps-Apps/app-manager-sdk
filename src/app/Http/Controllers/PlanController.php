@@ -101,5 +101,6 @@ class PlanController extends Controller
         elseif ($type === 'banners') {
             Cache::tags('app-manager-banners')->flush();
         }
+        return true;
     }
 }

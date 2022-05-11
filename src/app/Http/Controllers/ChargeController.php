@@ -21,6 +21,7 @@ class ChargeController extends Controller
         $tableName = config('app-manager.shop_table_name', 'users');
         $storeNameField = config('app-manager.field_names.name', 'name');
         $storePlanField = config('app-manager.field_names.plan_id', 'plan_id');
+        $storeTrialActivatedAtField = config('app-manager.field_names.trial_activated_at', 'trial_activated_at');
 
         $shop = DB::table($tableName)->where($storeNameField, $request->shop)->first();
 
@@ -60,7 +61,7 @@ class ChargeController extends Controller
 
             if (!empty($shop->$storePlanField) && $trialDays) {
 
-                $remaining = \AppManager::getRemainingDays($shop->$storeNameField);
+                $remaining = \AppManager::getRemainingDays($shop->$storeNameField, $shop->$storeTrialActivatedAtField, $shop->$storePlanField);
 
                 $trialDays = $remaining !== null ? $remaining : $trialDays;
             }
