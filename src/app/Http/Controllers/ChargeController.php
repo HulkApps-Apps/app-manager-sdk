@@ -22,6 +22,7 @@ class ChargeController extends Controller
         $storeNameField = config('app-manager.field_names.name', 'name');
         $storePlanField = config('app-manager.field_names.plan_id', 'plan_id');
         $storeTrialActivatedAtField = config('app-manager.field_names.trial_activated_at', 'trial_activated_at');
+        $storeShopifyPlanField = config('app-manager.field_names.shopify_plan', 'shopify_plan');
 
         $shop = DB::table($tableName)->where($storeNameField, $request->shop)->first();
 
@@ -68,11 +69,18 @@ class ChargeController extends Controller
 
             $discount_type = $plan['discount_type'] ?? "percentage";
 
+            $shopifyPlan = $shop->$storeShopifyPlanField;
+            $test = null;
+            if (!empty($plan['affiliate'])) {
+                $test = array_search($shopifyPlan, array_column($plan['affiliate'], 'value')) ? true : null;
+            }
+
             $variables = [
                 'name' => $plan['name'],
                 'returnUrl' => route('app-manager.plan.callback')."?".http_build_query($requestData, '', '&', PHP_QUERY_RFC3986),
                 'trialDays' => $trialDays,
-                'test' => $plan['test'],
+//                'test' => $plan['test'],
+                'test' => $test,
                 'lineItems' => [
                     [
                         'plan' => [
