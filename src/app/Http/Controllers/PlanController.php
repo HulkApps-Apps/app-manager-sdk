@@ -103,4 +103,12 @@ class PlanController extends Controller
         }
         return true;
     }
+
+    public function failSafeBackup(Request $request) {
+        $data = $request->all();
+
+        // store data into fail safe DB
+
+        return null;
+    }
 }
