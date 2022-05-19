@@ -10,11 +10,8 @@ class BannerController extends Controller
 {
     public function index() {
 
-        $banners = Cache::get('app-manager.banners', function () {
-            $response = \AppManager::getBanners();
-//			Cache::tags('app-manager-banners')->put('banners', $response, Carbon::now()->addDay());
-            Cache::put('app-manager.banners', $response, Carbon::now()->addDay());
-            return $response;
+        $banners = Cache::rememberForever('app-manager.banners', function () {
+            return \AppManager::getBanners();
         });
 
         return response()->json(['banners' => $banners]);
