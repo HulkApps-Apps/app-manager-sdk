@@ -41,14 +41,12 @@ class PlanController extends Controller
 
             $defaultPlanId = collect($plans)->where('interval', 'EVERY_30_DAYS')->sortByDesc('price')->pluck('id')->first();
 
-            $response = [
+            return [
                 'plans' => $plans,
                 'shopify_plan' => $shopify_plan,
                 'plan' => $plan,
                 'default_plan_id' => $defaultPlanId
             ];
-
-            return $response;
         });
 
         return response()->json($response);
