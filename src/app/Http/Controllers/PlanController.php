@@ -94,13 +94,8 @@ class PlanController extends Controller
     }
 
     public function burstCache(Request $request) {
-        $type = $request->get('type');
-        if ($type === 'plans') {
-            Cache::forget('app-manager.*');
-        }
-        elseif ($type === 'banners') {
-            Cache::tags('app-manager-banners')->flush();
-        }
+        Cache::forget('app-manager');
+
         return true;
     }
 
