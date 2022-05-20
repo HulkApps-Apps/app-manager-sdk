@@ -26,7 +26,8 @@ class PlanController extends Controller
         $shopifyPlanFieldName = config('app-manager.field_names.shopify_plan', 'shopify_plan');
 
         $cacheKey = $request->has('shop_domain') ? 'app-manager.plans-'.$request->get('shop_domain') : 'app-manager.all-plans';
-        $response = Cache::get($cacheKey, function () use ($request, $shopTableName, $storeFieldName, $planFieldName, $shopifyPlanFieldName, $cacheKey) {
+
+        $response = Cache::rememberForever($cacheKey, function () use ($request, $shopTableName, $storeFieldName, $planFieldName, $shopifyPlanFieldName, $cacheKey) {
             $shopify_plan = $plan = null;
             $plans = \AppManager::getPlans();
 
@@ -40,15 +41,12 @@ class PlanController extends Controller
 
             $defaultPlanId = collect($plans)->where('interval', 'EVERY_30_DAYS')->sortByDesc('price')->pluck('id')->first();
 
-            $response = [
+            return [
                 'plans' => $plans,
                 'shopify_plan' => $shopify_plan,
                 'plan' => $plan,
                 'default_plan_id' => $defaultPlanId
             ];
-//			Cache::tags('app-manager-plans')->put($cacheKey, Carbon::now()->addDay());
-            Cache::put($cacheKey, $response, Carbon::now()->addDay());
-            return $response;
         });
 
         return response()->json($response);
@@ -94,13 +92,8 @@ class PlanController extends Controller
     }
 
     public function burstCache(Request $request) {
-        $type = $request->get('type');
-        if ($type === 'plans') {
-            Cache::forget('app-manager.*');
-        }
-        elseif ($type === 'banners') {
-            Cache::tags('app-manager-banners')->flush();
-        }
+        Cache::forget('app-manager');
+
         return true;
     }
 
