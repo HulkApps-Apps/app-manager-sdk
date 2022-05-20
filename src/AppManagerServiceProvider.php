@@ -3,6 +3,7 @@
 namespace HulkApps\AppManager;
 
 use HulkApps\AppManager\app\Http\Middleware\VerifyAPIRequest;
+use HulkApps\AppManager\Console\InitDB;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 
@@ -34,6 +35,10 @@ class AppManagerServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__.'/../config/plan_features.php' => config_path('plan_features.php'),
             ], 'config');
+
+            $this->commands([
+                InitDB::class,
+            ]);
         }
     }
 
