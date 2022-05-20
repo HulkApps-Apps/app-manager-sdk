@@ -5,8 +5,10 @@ namespace HulkApps\AppManager\app\Http\Controllers;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
 class PlanController extends Controller
@@ -98,10 +100,57 @@ class PlanController extends Controller
     }
 
     public function failSafeBackup(Request $request) {
+//		shell_exec('php ../artisan app-manager:init-db');
+        $this->initializeFailsafeDB();
         $data = $request->all();
 
-        // store data into fail safe DB
+        $marketingBanners = [
+            'marketing_banners' => json_encode(head($data['app_structures']))
+        ];
+        DB::connection('app-manager-sqlite')->table('marketing_banners')->insert($marketingBanners);
 
-        return null;
+        $plans = $this->filterData($data['plans']);
+        foreach ($plans as $index => $plan) {
+            $plans[$index] = $this->serializeData($plan);
+            $plans[$index]['feature_plan'] = $plans[$index]['features'];
+            unset($plans[$index]['features']);
+        }
+        DB::connection('app-manager-sqlite')->table('plans')->insert($plans);
+
+        $charges = $this->filterData($data['charges']);
+        DB::connection('app-manager-sqlite')->table('charges')->insert($charges);
+
+        $discount_plans = $this->filterData($data['discount_plans']);
+        DB::connection('app-manager-sqlite')->table('discount_plan')->insert($discount_plans);
+
+        $extend_trials = $this->filterData($data['extend_trials']);
+        DB::connection('app-manager-sqlite')->table('trial_extension')->insert($extend_trials);
+    }
+
+    public function serializeData ($data) {
+        foreach ($data as $index => $datum) {
+            if (gettype($datum) == 'array') {
+                $data[$index] = json_encode($datum);
+            }
+        }
+        return $data;
+    }
+
+    public function filterData($data) {
+        $data = collect($data)->map(function ($value, $key) {
+            return collect($value)->forget('app_id')->toArray();
+        })->toArray();
+        return $data;
+    }
+
+    protected function initializeFailsafeDB() {
+        $db_path = storage_path('app-manager/database.sqlite');
+        if (File::exists($db_path)) {
+            File::delete($db_path);
+        }
+
+        File::put($db_path,'');
+
+        Artisan::call('migrate', ['--database' => 'app-manager-sqlite', '--path' => "vendor/hulkapps/appmanager/migrations"]);
     }
 }

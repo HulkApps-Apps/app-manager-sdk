@@ -2,10 +2,13 @@
 
 namespace HulkApps\AppManager;
 
+use HulkApps\AppManager\app\Traits\FailsafeHelper;
 use HulkApps\AppManager\Client\Client;
+use Illuminate\Support\Str;
 
 class AppManager
 {
+    use FailsafeHelper;
     public $client;
 
     public function __construct($api_endpoint, $api_key) {
@@ -16,22 +19,35 @@ class AppManager
     public function getBanners() {
 
         $data = $this->client->get('static-contents');
-        
-        return $data->json();
+        if (Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4')) {
+            return $data->json();
+        }
+        else {
+            return $this->prepareMarketingBanners();
+        }
+
     }
 
     public function getPlans() {
 
         $data = $this->client->get('plans');
-
-        return $data->json();
+        if (Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4')) {
+            return $data->json();
+        }
+        else {
+            return $this->preparePlans();
+        }
     }
 
     public function getPlan($plan_id, $shop_domain = null) {
 
         $data = $this->client->get('plan', ['plan_id' => $plan_id, 'shop_domain' => $shop_domain]);
-
-        return $data->json();
+        if (Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4')) {
+            return $data->json();
+        }
+        else {
+            return $this->preparePlan(['plan_id' => $plan_id, 'shop_domain' => $shop_domain]);
+        }
     }
 
     public function storeCharge($payload) {
@@ -55,7 +71,16 @@ class AppManager
             'plan_id' => $plan_id
         ]);
 
-        return $data->json();
+        if (Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4')) {
+            return $data->json();
+        }
+        else {
+            return $this->prepareRemainingDays([
+                'shop_domain' => $shop_domain,
+                'trial_activated_at' => $trial_activated_at,
+                'plan_id' => $plan_id
+            ]);
+        }
     }
 
     public function getCharge($shop_domain) {
