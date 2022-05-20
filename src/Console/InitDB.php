@@ -22,8 +22,7 @@ class InitDB extends Command
 
         File::put($db_path,'');
 
-
-        Artisan::call('migrate', array('database' => 'app-manager-sqlite', 'path' => __DIR__.'../../migrations'));
+        Artisan::call('migrate', ['--database' => 'app-manager-sqlite', '--path' => "vendor/hulkapps/appmanager/migrations"]);
 
     }
 
