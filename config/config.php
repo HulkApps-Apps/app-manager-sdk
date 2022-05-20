@@ -95,4 +95,15 @@ return [
     */
 
     'shopify_api_version' => env('SHOPIFY_API_VERSION', config('shopify-app.api_version')),
+
+    /*
+    |-------------------------------------------
+    | The Authorization token
+    |-------------------------------------------
+    |
+    | Authorization token to access app manager admin API
+    |
+    |-------------------------------------------
+    */
+    'bearer_token' => env('BEARER_TOKEN', ''),
 ];

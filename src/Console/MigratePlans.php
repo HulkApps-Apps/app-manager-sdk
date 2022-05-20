@@ -9,188 +9,87 @@ use Illuminate\Support\Facades\DB;
 
 class MigratePlans extends Command
 {
-    protected $signature = 'migrate:plans';
+    protected $signature = 'migrate:app-manager-plans';
 
     protected $description = 'Migrate App plans, features and charges to App manager';
 
+    public $errors = [];
+
     public function handle()
     {
-        $features = [
-            [
-                "id" => 1,
-                "uuid" => "035e5e78-d6ad-11ec-9d64-0242ac120002",
-                "name" => "Transaction fee",
-                "slug" => "transaction_fee",
-                "type" => "double",
-                "format" => "percentage",
-                "description" => null,
-                "display_order" => 2,
-                "created_at" => "2022-03-08 11:48:56",
-                "updated_at" => "2022-03-08 11:48:56"
-            ],
-            [
-                "id" => 2,
-                "uuid" => "035e60ee-d6ad-11ec-9d64-0242ac120002",
-                "name" => "Subscriptions",
-                "slug" => "subscriptions",
-                "type" => "integer",
-                "format" => "count",
-                "description" => null,
-                "display_order" => 3,
-                "created_at" => "2022-03-08 11:48:56",
-                "updated_at" => "2022-03-08 11:48:56"
-            ],
-            [
-                "id" => 3,
-                "uuid" => "035e621a-d6ad-11ec-9d64-0242ac120002",
-                "name" => "Subscription Management",
-                "slug" => "subscription_management",
-                "type" => "boolean",
-                "format" => null,
-                "description" => null,
-                "display_order" => 4,
-                "created_at" => "2022-03-08 11:48:56",
-                "updated_at" => "2022-03-08 11:48:56"
-            ],
-            [
-                "id" => 4,
-                "uuid" => "035e6328-d6ad-11ec-9d64-0242ac120002",
-                "name" => "Email notification",
-                "slug" => "email_notification",
-                "type" => "boolean",
-                "format" => null,
-                "description" => null,
-                "display_order" => 5,
-                "created_at" => "2022-03-08 11:48:56",
-                "updated_at" => "2022-03-08 11:48:56"
-            ],
-            [
-                "id" => 5,
-                "uuid" => "035e6440-d6ad-11ec-9d64-0242ac120002",
-                "name" => "Dashboard Analytics",
-                "slug" => "dashboard_analytics",
-                "type" => "boolean",
-                "format" => null,
-                "description" => null,
-                "display_order" => 6,
-                "created_at" => "2022-03-08 11:48:56",
-                "updated_at" => "2022-03-08 11:48:56"
-            ],
-            [
-                "id" => 6,
-                "uuid" => "035e6558-d6ad-11ec-9d64-0242ac120002",
-                "name" => "Advance Reporting",
-                "slug" => "advance_reporting",
-                "type" => "boolean",
-                "format" => null,
-                "description" => null,
-                "display_order" => 7,
-                "created_at" => "2022-03-08 11:48:56",
-                "updated_at" => "2022-03-08 11:48:56"
-            ],
-            [
-                "id" => 7,
-                "uuid" => "035e688c-d6ad-11ec-9d64-0242ac120002",
-                "name" => "Retention Engine (Coming soon)",
-                "slug" => "retention_engine",
-                "type" => "boolean",
-                "format" => null,
-                "description" => null,
-                "display_order" => 8,
-                "created_at" => "2022-03-08 11:48:56",
-                "updated_at" => "2022-03-08 11:48:56"
-            ],
-            [
-                "id" => 8,
-                "uuid" => "035e699a-d6ad-11ec-9d64-0242ac120002",
-                "name" => "Gifting (Coming soon)",
-                "slug" => "gifting",
-                "type" => "boolean",
-                "format" => null,
-                "description" => null,
-                "display_order" => 9,
-                "created_at" => "2022-03-08 11:48:56",
-                "updated_at" => "2022-03-08 11:48:56"
-            ],
-            [
-                "id" => 9,
-                "uuid" => "035e6a9e-d6ad-11ec-9d64-0242ac120002",
-                "name" => "API (Coming soon)",
-                "slug" => "api",
-                "type" => "boolean",
-                "format" => null,
-                "description" => null,
-                "display_order" => 10,
-                "created_at" => "2022-03-08 11:48:56",
-                "updated_at" => "2022-03-08 11:48:56"
-            ],
-            [
-                "id" => 10,
-                "uuid" => "035e6bac-d6ad-11ec-9d64-0242ac120002",
-                "name" => "24x7 Support",
-                "slug" => "24h_support",
-                "type" => "boolean",
-                "format" => null,
-                "description" => null,
-                "display_order" => 11,
-                "created_at" => "2022-03-08 11:48:56",
-                "updated_at" => "2022-03-08 11:48:56"
-            ]
-        ];
-
-        $token = '';
-        $api_endpoint = 'https://app-manager.localhost/api/';
-        $api_token = '';
-        $client = Client::withHeaders(['Authorization' => 'Bearer '.$token, 'Accept' => 'application/json'])->withoutVerifying()->baseUri($api_endpoint);
-        $appSlug = 'subscription-plus';
-        $appId = 1;
-        $tableName = config('app-manager.shop_table_name', 'users');
+        $bearer_token = config('app-manager.bearer_token');
+        $api_endpoint = config('app-manager.api');
+        $api_token = config('app-manager.secret');
+        $shopTableName = config('app-manager.shop_table_name', 'users');
         $shopify_fields = config('app-manager.field_names');
-        $users = DB::table($tableName)->get()->toArray();
-        $plans = DB::table($shopify_fields['plan_table_name'])->get()->toArray();
-        $charges = DB::table($shopify_fields['charge_table_name'])->get()->toArray();
+        $features = config('plan_features');
+
+        $client = Client::withHeaders(['Authorization' => 'Bearer '.$bearer_token, 'token' => $api_token, 'Accept' => 'application/json'])->withoutVerifying()->baseUri($api_endpoint);
+
+        $userData = DB::table($shopTableName)->pluck($shopify_fields['name'], 'id')->all();
+        $plans = DB::table('plans')->get()->toArray();
+        $charges = DB::table('charges')->get()->toArray();
+
         $plans = json_decode(json_encode($plans), true);
         $charges = json_decode(json_encode($charges), true);
-        $users = json_decode(json_encode($users), true);
 
-        $userData = collect($users)->pluck($shopify_fields['name'],'id')->toArray();
+        // fetch stored plans of that apps
+        $response = $client->get("plans?limit=100");
+        if ($response->getStatusCode() != 200) {
+            dd(json_encode($response->json()));
+        }
+        $data = $response->json()['data'];
+        foreach ($data as $row) {
+            $storedPlans[$row['name'] . '#' . $row['interval']['value'] . '#' . $row['public']] = $row['id'];
+        }
 
         $migratedPlans = [];
         foreach ($plans as $plan) {
-            $tempPlan = [
+            $preparedPlan = [
+                'id' => $storedPlans[$plan['name'] . '#' . $plan['interval'] . '#' . (isset($plan['public']) ? $plan['public'] : 1)] ?? null,
                 'type' => $plan['type'],
                 'name' => $plan['name'],
                 'price' => $plan['price'],
-                'offer_text' => $plan['offer_text'],
+                'offer_text' => $plan['offer_text'] ?? null,
                 'interval' => $plan['interval'] == 'EVERY_30_DAYS' ? ["label" => "Monthly", "value" => "EVERY_30_DAYS"] : ["label" => "Annual", "value" => "ANNUAL"],
-                'shopify_plans' => $this->prepareShopifyPlanData($plan['shopify_plans']),
-                'trial_days' => $plan['trial_days'],
+                'trial_days' => $plan['trial_days'] ?? 0,
                 'test' => $plan['test'] ?? 0,
-                'public' => $plan['public'] ?? 1,
+                'public_plan' => isset($plan['public']) ? $plan['public'] == 1 : true,
+                'shopify_plans' => isset($plan['shopify_plans']) ? $this->prepareShopifyPlanData($plan['shopify_plans']) : [],
+                'store_base_plan' => $plan['store_base_plan'] ?? (isset($plan['shopify_plans']) ? 1 : 0),
                 'is_custom' => $plan['is_custom'] ?? 0,
                 'base_plan' => $plan['base_plan'] ?? null,
-                'store_base_plan' => $plan['store_base_plan'] ?? null,
                 'created_at' => $plan['created_at'] ?? now(),
                 'updated_at' => $plan['updated_at'] ?? now(),
                 'discount' => $plan['discount'] ?? null,
                 'cycle_count' => $plan['cycle_count'] ?? null,
                 'discount_type' => $plan['discount_type'] ?? null,
                 'affiliate' => $plan['affiliate'] ?? null,
-                'app_id' => $appId,
             ];
-            $res = $client->post("apps/$appSlug/plans/modify", $tempPlan)->json();
-            $migratedPlans[$plan['id']] = $res['plan']['id'] ?? 0;
 
-			$planFeatureIds = DB::table('plan_features')->where('plan_id', $plan['id'])->update(['plan_id' => $migratedPlans[$plan['id']]]);
+            try {
+                $response = $client->post("plans/modify", $preparedPlan);
+                if (in_array($response->getStatusCode(), [200, 201])) {
+                    $response = $response->json();
+                    $migratedPlans[$plan['id']] = $response['plan']['id'] ?? 0;
+                }
+                else {
+                    $this->handleError($response, 'plan', $plan, $preparedPlan);
+                }
+            }
+            catch (\Exception $e) {
+                $this->handleError($response, 'plan', $plan, $preparedPlan);
+            }
         }
 
-        $client = Client::withHeaders(['Authorization' => 'Bearer '.$token, 'token' => $api_token, 'Accept' => 'application/json'])->withoutVerifying()->baseUri($api_endpoint);
         foreach ($charges as $charge) {
-            $tempCharge = [
+
+            $domain_name = $shopTableName == 'users' ? ($userData[$charge['user_id']] ?? null) : ($shopTableName == 'shops' ? ($userData[$charge['shop_id']] ?? null) : null);
+            $preparedCharge = [
                 'charge_id' => $charge['charge_id'],
-                'test' => $charge['test'],
+                'test' => $charge['test'] ?? 0,
                 'status' => $charge['status'] ?? null,
-                'name' => $charge['name'],
+                'name' => $charge['name'] ?? null,
                 'type' => $charge['type'],
                 'price' => $charge['price'],
                 'interval' => $charge['interval'] ?? null,
@@ -201,26 +100,68 @@ class MigratePlans extends Command
                 'cancelled_on' => Carbon::parse($charge['cancelled_on'])->format('Y-m-d H:i:s') ?? null,
                 'expires_on' => $charge['expires_on'] ?? null,
                 'description' => $charge['description'] ?? null,
-                'shop_domain' => $userData[$charge['user_id']] ?? null,
+                'shop_domain' => $domain_name,
                 'created_at' => $charge['created_at'] ?? null,
                 'updated_at' => $charge['updated_at'] ?? null,
-                'plan_id' => 11,
-                'app_id' => $appId
+                'plan_id' => $migratedPlans[$charge['plan_id']] ?? null,
             ];
-            $res = $client->post("store-charge", $tempCharge)->json();
 
+            try {
+                $response = $client->post("store-charge", $preparedCharge);
+                if ($response->getStatusCode() != 201) {
+                    $this->handleError($response, 'charge', $charge, $preparedCharge);
+                }
+            }
+            catch (\Exception $e) {
+                $this->handleError($response, 'charge', $charge, $preparedCharge);
+            }
         }
 
-        // Update plan id in users table
         foreach ($migratedPlans as $index => $migratedPlan) {
-            DB::table($tableName)->where('plan_id', $index)->update(['plan_id' => $migratedPlan]);
-        }
 
+            // Update plan id in users table
+            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+            DB::table('plans')->where('id', $index)->update(['id' => $migratedPlan]);
+            DB::table('charges')->where('plan_id', $index)->update(['plan_id' => $migratedPlan]);
+            DB::table('plan_feature')->where('plan_id', $index)->update(['plan_id' => $migratedPlan]);
+            DB::table($shopTableName)->where('plan_id', $index)->update(['plan_id' => $migratedPlan]);
+            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
+            // Add plan features
+            $featurePlans = DB::table('plan_feature')->where('plan_id', $migratedPlan)->get()->toArray();
+            $featurePlans = json_decode(json_encode($featurePlans), true);
+            $featurePlans = collect($featurePlans)->pluck('value', 'feature_id')->toArray();
+
+            foreach ($features as $key => $feature) {
+                if (isset($featurePlans[$feature['id']])) {
+                    $features[$key]['selected'] = true;
+                    $features[$key]['inputValue'] = $featurePlans[$feature['id']];
+                }
+                else {
+                    $features[$key]['selected'] = false;
+                    $features[$key]['inputValue'] = null;
+                }
+            }
+            $data = [
+                'features' => $features,
+                'plan_id' => $migratedPlan
+            ];
+            try {
+                $response = $client->post("plans/configure", $data);
+                if ($response->getStatusCode() != 200) {
+                    $this->handleError($response, 'plan-configure', $migratedPlan, $features);
+                }
+            }
+            catch (\Exception $e) {
+                $this->handleError($response, 'plan-configure', $migratedPlan, $features);
+            }
+        }
+        $this->errors ? dd($this->errors) : '';
     }
 
     public function prepareShopifyPlanData($data) {
         $result = [];
-        $shopify_plan = [
+        $shopif_plan = [
             "Basic"=> "basic",
             "Affiliate"=> "affiliate",
             "NPO Full"=> "npo_full",
@@ -239,7 +180,7 @@ class MigratePlans extends Command
         ];
         $data = explode(',', str_replace('"', '', str_replace('[', '', str_replace(']', '', $data))));
 
-        foreach ($shopify_plan as $key => $plan) {
+        foreach ($shopif_plan as $key => $plan) {
             if (in_array($plan, $data)) {
                 $result[] = [
                     'label' => $key,
@@ -248,5 +189,15 @@ class MigratePlans extends Command
             }
         }
         return $result;
+    }
+
+    public function handleError($response, $type, $data, $preparedData) {
+        $this->errors[] = [
+            'response' => json_encode($response->json()),
+            'status_code' => $response->getStatusCode(),
+            'type' => $type,
+            'data' => json_encode($data),
+            'prepared_data' => json_encode($preparedData),
+        ];
     }
 }
