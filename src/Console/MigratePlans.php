@@ -156,7 +156,9 @@ class MigratePlans extends Command
                 $this->handleError($response, 'plan-configure', $migratedPlan, $features);
             }
         }
-        $this->errors ? dd($this->errors) : '';
+        if ($this->errors) {
+            $response = $client->post("store-migration-log", $this->errors);
+        }
     }
 
     public function prepareShopifyPlanData($data) {
