@@ -19,48 +19,34 @@ class AppManager
     public function getBanners() {
 
         $data = $this->client->get('static-contents');
-        if (Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4')) {
-            return $data->json();
-        }
-        else {
-            return $this->prepareMarketingBanners();
-        }
-
+        return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->prepareMarketingBanners();
     }
 
     public function getPlans() {
 
         $data = $this->client->get('plans');
-        if (Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4')) {
-            return $data->json();
-        }
-        else {
-            return $this->preparePlans();
-        }
+        return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->preparePlans();
     }
 
     public function getPlan($plan_id, $shop_domain = null) {
 
         $data = $this->client->get('plan', ['plan_id' => $plan_id, 'shop_domain' => $shop_domain]);
-        if (Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4')) {
-            return $data->json();
-        }
-        else {
-            return $this->preparePlan(['plan_id' => $plan_id, 'shop_domain' => $shop_domain]);
-        }
+        return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->preparePlan(['plan_id' => $plan_id, 'shop_domain' => $shop_domain]);
     }
 
     public function storeCharge($payload) {
 
-        return $this->client->post('store-charge', $payload)->json();
+        $data = $this->client->post('store-charge', $payload);
+        return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->storeChargeHelper($payload);
     }
 
     public function cancelCharge($shop_domain, $plan_id) {
 
-        return $this->client->post('cancel-charge', [
+        $data = $this->client->post('cancel-charge', [
             'shop_domain' => $shop_domain,
             'plan_id' => $plan_id
-        ])->json();
+        ]);
+        return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->cancelChargeHelper($shop_domain, $plan_id);
     }
 
     public function getRemainingDays($shop_domain, $trial_activated_at = null ,$plan_id = null) {
@@ -71,16 +57,11 @@ class AppManager
             'plan_id' => $plan_id
         ]);
 
-        if (Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4')) {
-            return $data->json();
-        }
-        else {
-            return $this->prepareRemainingDays([
-                'shop_domain' => $shop_domain,
-                'trial_activated_at' => $trial_activated_at,
-                'plan_id' => $plan_id
-            ]);
-        }
+        return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->prepareRemainingDays([
+            'shop_domain' => $shop_domain,
+            'trial_activated_at' => $trial_activated_at,
+            'plan_id' => $plan_id
+        ]);
     }
 
     public function getCharge($shop_domain) {
@@ -88,6 +69,6 @@ class AppManager
         $data = $this->client->get('get-charge', [
             'shop_domain' => $shop_domain,
         ]);
-        return $data->json();
+        return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->getChargeHelper($shop_domain);
     }
 }

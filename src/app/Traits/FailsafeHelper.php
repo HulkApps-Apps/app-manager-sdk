@@ -109,4 +109,26 @@ trait FailsafeHelper {
         }
         return 0;
     }
+
+    public function getChargeHelper($shop_domain) {
+        return DB::connection('app-manager-sqlite')->table('charges')
+            ->where('shop_domain', $shop_domain)->where('status', 'active')->first() ?? null;
+    }
+
+    public function storeChargeHelper($data) {
+        $data['sync'] = false;
+        $charge = DB::connection('app-manager-sqlite')->table('charges')->insert($data);
+        return response()->json(['message' => $charge ? 'success' : 'fail'], $charge ? 201 : 422);
+    }
+
+    public function cancelChargeHelper($shop_domain, $plan_id) {
+        $charge = DB::connection('app-manager-sqlite')->table('charges')
+            ->where('shop_domain', $shop_domain)->where('plan_id', $plan_id)
+            ->update([
+                'status' => 'cancelled',
+                'cancelled_on' => Carbon::now(),
+                'sync' => false
+            ]);
+        return response()->json(['message' => $charge ? 'success' : 'fail'], $charge ? 201 : 422);
+    }
 }
