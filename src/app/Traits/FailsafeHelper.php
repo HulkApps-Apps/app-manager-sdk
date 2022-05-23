@@ -3,6 +3,7 @@
 namespace HulkApps\AppManager\app\Traits;
 
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 
 trait FailsafeHelper {
@@ -112,11 +113,12 @@ trait FailsafeHelper {
 
     public function getChargeHelper($shop_domain) {
         return DB::connection('app-manager-sqlite')->table('charges')
-            ->where('shop_domain', $shop_domain)->where('status', 'active')->first() ?? null;
+                ->where('shop_domain', $shop_domain)->where('status', 'active')->first() ?? null;
     }
 
     public function storeChargeHelper($data) {
         $data['sync'] = false;
+        $data['process_type'] = 'store-charge';
         $charge = DB::connection('app-manager-sqlite')->table('charges')->insert($data);
         return response()->json(['message' => $charge ? 'success' : 'fail'], $charge ? 201 : 422);
     }
@@ -130,5 +132,40 @@ trait FailsafeHelper {
                 'sync' => false
             ]);
         return response()->json(['message' => $charge ? 'success' : 'fail'], $charge ? 201 : 422);
+    }
+
+    public function syncAppManager() {
+        $response = \AppManager::getStatus();
+
+        if ($response->getStatusCode() == 200) {
+            $charges = DB::connection('app-manager-sqlite')->table('charges')
+                ->where('sync', 0)->where('process_type', 'store-charge')->get()->toArray();
+
+            if ($charges) {
+                foreach ($charges as $charge) {
+                    $charge = json_decode(json_encode($charge), true);
+
+                    $response = \AppManager::syncCharge($charge);
+                    if ($response) {
+                        DB::connection('app-manager-sqlite')->table('charges')
+                            ->where('charge_id', $charge['charge_id'])->update([
+                                'sync' => 1,
+                                'process_type' => null
+                            ]);
+                    }
+                }
+            }
+        }
+    }
+
+    public function initializeFailsafeDB() {
+
+        if (!\Storage::exists('app-manager')) {
+            \Storage::makeDirectory('app-manager',775);
+        }
+
+        \Storage::put('app-manager/database.sqlite','');
+
+        Artisan::call('migrate', ['--database' => 'app-manager-sqlite', '--path' => "/vendor/hulkapps/appmanager/migrations"]);
     }
 }

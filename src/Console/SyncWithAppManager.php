@@ -4,29 +4,24 @@
 namespace HulkApps\AppManager\Console;
 
 
-use HulkApps\AppManager\Client\Client;
+use HulkApps\AppManager\app\Traits\FailsafeHelper;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class SyncWithAppManager extends Command
 {
+    use FailsafeHelper;
     protected $signature = 'sync:app-manager';
 
     protected $description = 'Sync DB with App Manager';
 
     public function handle() {
-
-        $client = Client::withHeaders(['token' => config('app-manager.secret'), 'Accept' => 'application/json'])->withoutVerifying()
-            ->baseUri(config('app-manager.api'));
-
-        $response = $client->get('get-status');
-        if ($response->getStatusCode == 200) {
-            $charges = DB::connection('app-manager-sqlite')->table('charges')
-                ->where('sync', false)->get()->toArray();
-            if ($charges) {
-
-            }
+        try {
+            $this->syncAppManager();
         }
-
+        catch (\Exception $e) {
+            report($e);
+        }
     }
 }

@@ -19,7 +19,7 @@ class AppManager
     public function getBanners() {
 
         $data = $this->client->get('static-contents');
-        return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->prepareMarketingBanners();
+        return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : json_decode($this->prepareMarketingBanners());
     }
 
     public function getPlans() {
@@ -49,6 +49,12 @@ class AppManager
         return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->cancelChargeHelper($shop_domain, $plan_id);
     }
 
+    public function syncCharge($payload) {
+
+        $data = $this->client->post('sync-charge', $payload);
+        return $data->json();
+    }
+
     public function getRemainingDays($shop_domain, $trial_activated_at = null ,$plan_id = null) {
 
         $data = $this->client->get('get-remaining-days', [
@@ -70,5 +76,9 @@ class AppManager
             'shop_domain' => $shop_domain,
         ]);
         return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->getChargeHelper($shop_domain);
+    }
+
+    public function getStatus() {
+        return $this->client->get('get-status');
     }
 }

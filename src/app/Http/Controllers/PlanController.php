@@ -3,16 +3,15 @@
 namespace HulkApps\AppManager\app\Http\Controllers;
 
 use Carbon\Carbon;
+use HulkApps\AppManager\app\Traits\FailsafeHelper;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Str;
 
 class PlanController extends Controller
 {
+    use FailsafeHelper;
     public function index() {
 
         $features = config('plan_features');
@@ -100,12 +99,22 @@ class PlanController extends Controller
     }
 
     public function failSafeBackup(Request $request) {
-//		shell_exec('php ../artisan app-manager:init-db');
+
+        // sync pending charges with app manager
+        try {
+            $this->syncAppManager();
+        }
+        catch (\Exception $e) {
+            report($e);
+        }
+
+        // initialize and reset failsafe database
         $this->initializeFailsafeDB();
+
         $data = $request->all();
 
         $marketingBanners = [
-            'marketing_banners' => json_encode(head($data['app_structures']))
+            'marketing_banners' => json_encode($data['app_structures'])
         ];
         DB::connection('app-manager-sqlite')->table('marketing_banners')->insert($marketingBanners);
 
@@ -141,16 +150,5 @@ class PlanController extends Controller
             return collect($value)->forget('app_id')->toArray();
         })->toArray();
         return $data;
-    }
-
-    protected function initializeFailsafeDB() {
-        $db_path = storage_path('app-manager/database.sqlite');
-        if (File::exists($db_path)) {
-            File::delete($db_path);
-        }
-
-        File::put($db_path,'');
-
-        Artisan::call('migrate', ['--database' => 'app-manager-sqlite', '--path' => "vendor/hulkapps/appmanager/migrations"]);
     }
 }

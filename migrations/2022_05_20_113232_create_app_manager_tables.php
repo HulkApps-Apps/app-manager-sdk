@@ -31,7 +31,6 @@ class CreateAppManagerTables extends Migration
 			$table->integer('test')->nullable();
 			$table->dateTime('on_install')->nullable();
 			$table->boolean('is_custom')->default(false);
-			$table->unsignedBigInteger('app_id');
 			$table->unsignedBigInteger('base_plan')->nullable();
 			$table->boolean('public')->default(true);
 			$table->integer('discount')->nullable();
@@ -61,6 +60,8 @@ class CreateAppManagerTables extends Migration
 			$table->unsignedBigInteger('plan_id');
 			$table->text('description')->nullable();
 			$table->string('shop_domain');
+			$table->boolean('sync')->default(false);
+            $table->string('process_type')->nullable();
 			$table->timestamps();
 		});
 
