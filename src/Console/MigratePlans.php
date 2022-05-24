@@ -33,18 +33,20 @@ class MigratePlans extends Command
         $plans = json_decode(json_encode($plans), true);
         $charges = json_decode(json_encode($charges), true);
 
-        // fetch stored plans of that apps
-        $response = $client->get("plans?limit=100");
+        // fetch stored plans
+        $response = $client->get("admin/plans?limit=100");
         if ($response->getStatusCode() != 200) {
             dd(json_encode($response->json()));
         }
         $data = $response->json()['data'];
         foreach ($data as $row) {
-            $storedPlans[$row['name'] . '#' . $row['interval']['value'] . '#' . $row['public']] = $row['id'];
+            $storedPlans[$row['name'] . '#' . $row['interval']['value'] . '#' . ($row['public'] ? 1 : 0)] = $row['id'];
         }
 
         $migratedPlans = [];
-        foreach ($plans as $plan) {
+        foreach ($plans as $index => $plan) {
+
+            $this->progressBar($index, count($plans), 'Plans');
             $preparedPlan = [
                 'id' => $storedPlans[$plan['name'] . '#' . $plan['interval'] . '#' . (isset($plan['public']) ? $plan['public'] : 1)] ?? null,
                 'type' => $plan['type'],
@@ -68,7 +70,7 @@ class MigratePlans extends Command
             ];
 
             try {
-                $response = $client->post("plans/modify", $preparedPlan);
+                $response = $client->post("admin/plans/modify", $preparedPlan);
                 if (in_array($response->getStatusCode(), [200, 201])) {
                     $response = $response->json();
                     $migratedPlans[$plan['id']] = $response['plan']['id'] ?? 0;
@@ -80,12 +82,13 @@ class MigratePlans extends Command
             catch (\Exception $e) {
                 $this->handleError($response, 'plan', $plan, $preparedPlan);
             }
+            sleep(1);
         }
 
-        foreach ($charges as $charge) {
+        foreach ($charges as $index => $charge) {
 
+            $this->progressBar($index, count($charges), 'Charges');
             $shop_domain = $shopTableName == 'users' ? ($userData[$charge['user_id']] ?? null) : ($shopTableName == 'shops' ? ($userData[$charge['shop_id']] ?? null) : null);
-            $storedCharge = \AppManager::getCharge($shop_domain);
             $preparedCharge = [
                 'charge_id' => $charge['charge_id'],
                 'test' => $charge['test'] ?? 0,
@@ -95,10 +98,10 @@ class MigratePlans extends Command
                 'price' => $charge['price'],
                 'interval' => $charge['interval'] ?? null,
                 'trial_days' => $charge['trial_days'] ?? null,
-                'billing_on' => $charge['billing_on'] ?? null,
-                'trial_ends_on' => Carbon::parse($charge['trial_ends_on'])->format('Y-m-d H:i:s') ?? null,
-                'activated_on' => Carbon::parse($charge['activated_on'])->format('Y-m-d H:i:s') ?? null,
-                'cancelled_on' => Carbon::parse($charge['cancelled_on'])->format('Y-m-d H:i:s') ?? null,
+                'billing_on' => Carbon::parse($charge['billing_on'])->format('Y-m-d') ?? null,
+                'trial_ends_on' => Carbon::parse($charge['trial_ends_on'])->format('Y-m-d') ?? null,
+                'activated_on' => Carbon::parse($charge['activated_on'])->format('Y-m-d') ?? null,
+                'cancelled_on' => Carbon::parse($charge['cancelled_on'])->format('Y-m-d') ?? null,
                 'expires_on' => $charge['expires_on'] ?? null,
                 'description' => $charge['description'] ?? null,
                 'shop_domain' => $shop_domain,
@@ -107,6 +110,8 @@ class MigratePlans extends Command
                 'plan_id' => $migratedPlans[$charge['plan_id']] ?? null,
             ];
 
+            // fetch stored charge
+            $storedCharge = \AppManager::getCharge($shop_domain);
             if ($storedCharge) {
                 $preparedCharge['id'] = $storedCharge['id'];
             }
@@ -120,9 +125,12 @@ class MigratePlans extends Command
             catch (\Exception $e) {
                 $this->handleError($response, 'charge', $charge, $preparedCharge);
             }
+            sleep(1);
         }
 
         foreach ($migratedPlans as $index => $migratedPlan) {
+
+            $this->progressBar($index, count($migratedPlans), 'Plan Features');
 
             // Update plan id in users table
             DB::statement('SET FOREIGN_KEY_CHECKS=0;');
@@ -132,7 +140,7 @@ class MigratePlans extends Command
             DB::table($shopTableName)->where('plan_id', $index)->update(['plan_id' => $migratedPlan]);
             DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
-            // Add plan features
+            // Prepare and Add plan features
             $featurePlans = DB::table('plan_feature')->where('plan_id', $migratedPlan)->get()->toArray();
             $featurePlans = json_decode(json_encode($featurePlans), true);
             $featurePlans = collect($featurePlans)->pluck('value', 'feature_id')->toArray();
@@ -152,7 +160,7 @@ class MigratePlans extends Command
                 'plan_id' => $migratedPlan
             ];
             try {
-                $response = $client->post("plans/configure", $data);
+                $response = $client->post("admin/plans/configure", $data);
                 if ($response->getStatusCode() != 200) {
                     $this->handleError($response, 'plan-configure', $migratedPlan, $features);
                 }
@@ -160,9 +168,13 @@ class MigratePlans extends Command
             catch (\Exception $e) {
                 $this->handleError($response, 'plan-configure', $migratedPlan, $features);
             }
+            sleep(1);
         }
+
+        // log errors
         if ($this->errors) {
             $response = $client->post("store-migration-log", $this->errors);
+            dump($this->errors);
         }
     }
 
@@ -206,5 +218,13 @@ class MigratePlans extends Command
             'data' => json_encode($data),
             'prepared_data' => json_encode($preparedData),
         ];
+    }
+
+    function progressBar($done, $total,$comment)
+    {
+        $percentage = floor(($done * 100) / $total);
+        $left = 100 - $percentage;
+        $write = sprintf("\033[0G\033[2K[%'={$percentage}s>%-{$left}s] - $percentage%% - $done/$total [$comment]", "", "");
+        fwrite(STDERR, $write);
     }
 }
