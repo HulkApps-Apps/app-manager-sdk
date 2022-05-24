@@ -84,7 +84,8 @@ class MigratePlans extends Command
 
         foreach ($charges as $charge) {
 
-            $domain_name = $shopTableName == 'users' ? ($userData[$charge['user_id']] ?? null) : ($shopTableName == 'shops' ? ($userData[$charge['shop_id']] ?? null) : null);
+            $shop_domain = $shopTableName == 'users' ? ($userData[$charge['user_id']] ?? null) : ($shopTableName == 'shops' ? ($userData[$charge['shop_id']] ?? null) : null);
+            $storedCharge = \AppManager::getCharge($shop_domain);
             $preparedCharge = [
                 'charge_id' => $charge['charge_id'],
                 'test' => $charge['test'] ?? 0,
@@ -100,11 +101,15 @@ class MigratePlans extends Command
                 'cancelled_on' => Carbon::parse($charge['cancelled_on'])->format('Y-m-d H:i:s') ?? null,
                 'expires_on' => $charge['expires_on'] ?? null,
                 'description' => $charge['description'] ?? null,
-                'shop_domain' => $domain_name,
+                'shop_domain' => $shop_domain,
                 'created_at' => $charge['created_at'] ?? null,
                 'updated_at' => $charge['updated_at'] ?? null,
                 'plan_id' => $migratedPlans[$charge['plan_id']] ?? null,
             ];
+
+            if ($storedCharge) {
+                $preparedCharge['id'] = $storedCharge['id'];
+            }
 
             try {
                 $response = $client->post("store-charge", $preparedCharge);
