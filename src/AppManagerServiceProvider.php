@@ -3,7 +3,6 @@
 namespace HulkApps\AppManager;
 
 use HulkApps\AppManager\app\Http\Middleware\VerifyAPIRequest;
-use HulkApps\AppManager\Console\InitDB;
 use HulkApps\AppManager\Console\SyncWithAppManager;
 use Illuminate\Console\Scheduling\Schedule;
 use HulkApps\AppManager\Console\MigratePlans;
@@ -40,7 +39,7 @@ class AppManagerServiceProvider extends ServiceProvider
             ], 'config');
 
             $this->commands([
-//                InitDB::class,
+                MigratePlans::class,
                 SyncWithAppManager::class
             ]);
 
