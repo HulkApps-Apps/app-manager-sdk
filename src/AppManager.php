@@ -2,10 +2,13 @@
 
 namespace HulkApps\AppManager;
 
+use HulkApps\AppManager\app\Traits\FailsafeHelper;
 use HulkApps\AppManager\Client\Client;
+use Illuminate\Support\Str;
 
 class AppManager
 {
+    use FailsafeHelper;
     public $client;
 
     public function __construct($api_endpoint, $api_key) {
@@ -16,35 +19,40 @@ class AppManager
     public function getBanners() {
 
         $data = $this->client->get('static-contents');
-        
-        return $data->json();
+        return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : json_decode($this->prepareMarketingBanners());
     }
 
     public function getPlans() {
 
         $data = $this->client->get('plans');
-
-        return $data->json();
+        return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->preparePlans();
     }
 
     public function getPlan($plan_id, $shop_domain = null) {
 
         $data = $this->client->get('plan', ['plan_id' => $plan_id, 'shop_domain' => $shop_domain]);
-
-        return $data->json();
+        return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->preparePlan(['plan_id' => $plan_id, 'shop_domain' => $shop_domain]);
     }
 
     public function storeCharge($payload) {
 
-        return $this->client->post('store-charge', $payload)->json();
+        $data = $this->client->post('store-charge', $payload);
+        return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->storeChargeHelper($payload);
     }
 
     public function cancelCharge($shop_domain, $plan_id) {
 
-        return $this->client->post('cancel-charge', [
+        $data = $this->client->post('cancel-charge', [
             'shop_domain' => $shop_domain,
             'plan_id' => $plan_id
-        ])->json();
+        ]);
+        return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->cancelChargeHelper($shop_domain, $plan_id);
+    }
+
+    public function syncCharge($payload) {
+
+        $data = $this->client->post('sync-charge', $payload);
+        return $data->json();
     }
 
     public function getRemainingDays($shop_domain, $trial_activated_at = null ,$plan_id = null) {
@@ -55,7 +63,11 @@ class AppManager
             'plan_id' => $plan_id
         ]);
 
-        return $data->json();
+        return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->prepareRemainingDays([
+            'shop_domain' => $shop_domain,
+            'trial_activated_at' => $trial_activated_at,
+            'plan_id' => $plan_id
+        ]);
     }
 
     public function getCharge($shop_domain) {
@@ -63,6 +75,10 @@ class AppManager
         $data = $this->client->get('get-charge', [
             'shop_domain' => $shop_domain,
         ]);
-        return $data->json();
+        return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->getChargeHelper($shop_domain);
+    }
+
+    public function getStatus() {
+        return $this->client->get('get-status');
     }
 }
