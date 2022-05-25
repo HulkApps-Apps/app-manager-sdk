@@ -40,7 +40,22 @@ class PlanController extends Controller
                 $plan = collect($plans)->where('id', $activePlanId)->first();
             }
 
-            $defaultPlanId = collect($plans)->where('interval', 'EVERY_30_DAYS')->sortByDesc('price')->pluck('id')->first();
+            $defaultPlanId = 0;
+            $defaultPlansData = collect($plans)->where('interval', 'EVERY_30_DAYS')->sortByDesc('price');
+            $storeBasePlan = $defaultPlansData->pluck('store_base_plan')->first();
+            if ($storeBasePlan) {
+                $shopify_plans = $defaultPlansData->pluck('shopify_plans', 'id')->toArray();
+                foreach ($shopify_plans as $index => $s) {
+                    if (in_array($shopify_plan, $s)) {
+                        if ($index > $defaultPlanId) {
+                            $defaultPlanId = $index;
+                        }
+                    }
+                }
+            }
+            else {
+                $defaultPlanId = $defaultPlansData->pluck('id')->first();
+            }
 
             return [
                 'plans' => $plans,
@@ -87,6 +102,7 @@ class PlanController extends Controller
                 'trial_activated_at' => Carbon::now()
             ]);
         if ($user) {
+            $this->burstCache($request);
             return response()->json(['status' => true]);
         }
         return response()->json(['status' => false], 422);
