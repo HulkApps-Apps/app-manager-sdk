@@ -79,7 +79,6 @@ return [
         'plan_id' => env('PLAN_ID', 'plan_id'), // 1
         'created_at' => env('CREATED_AT', 'created_at'), // 2022-04-15 10:43:05
         'trial_activated_at' => env('TRIAL_ACTIVATED_AT', 'trial_activated_at'), // 2022-04-15 10:43:05
-        'email' => env('EMAIL', 'email'), // shop@demo-chirag-parmar.myshopify.com
     ],
 
     /*
@@ -95,4 +94,15 @@ return [
     */
 
     'shopify_api_version' => env('SHOPIFY_API_VERSION', config('shopify-app.api_version')),
+
+    /*
+    |-------------------------------------------
+    | The Authorization token
+    |-------------------------------------------
+    |
+    | Authorization token to access app manager admin API
+    |
+    |-------------------------------------------
+    */
+    'bearer_token' => env('BEARER_TOKEN', ''),
 ];
