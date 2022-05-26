@@ -72,7 +72,7 @@ class ChargeController extends Controller
             $shopifyPlan = $shop->$storeShopifyPlanField;
             $test = null;
             if (!empty($plan['affiliate'])) {
-                $test = array_search($shopifyPlan, array_column($plan['affiliate'], 'value')) ? true : null;
+                $test = in_array($shopifyPlan, array_column($plan['affiliate'], 'value')) ? true : null;
             }
 
             $variables = [

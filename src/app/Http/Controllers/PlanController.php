@@ -47,9 +47,8 @@ class PlanController extends Controller
                 $shopify_plans = $defaultPlansData->pluck('shopify_plans', 'id')->toArray();
                 foreach ($shopify_plans as $index => $s) {
                     if (in_array($shopify_plan, $s)) {
-                        if ($index > $defaultPlanId) {
-                            $defaultPlanId = $index;
-                        }
+                        $defaultPlanId = $index;
+                        break;
                     }
                 }
             }
