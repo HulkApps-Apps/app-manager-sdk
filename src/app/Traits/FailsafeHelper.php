@@ -52,10 +52,11 @@ trait FailsafeHelper {
         $shopDomain = [$data['shop_domain']];
 
         $planData = DB::connection('app-manager-sqlite')->table('plans')
-            ->where('id', $planId)->with(['app', 'features'])->get()->first();
+            ->where('id', $planId)->first();
 
         if ($planData && $shopDomain) {
-            $planData = $planData->toArray();
+            $planData = json_decode(json_encode($planData), true);
+//			$planData = $planData->toArray();
             $customDiscounts = DB::connection('app-manager-sqlite')->table('discount_plan')
                 ->where('plan_id', $planData['id'])->where('shop_domain', $shopDomain)
                 ->select(['discount', 'discount_type', 'cycle_count'])->first();
@@ -64,7 +65,7 @@ trait FailsafeHelper {
             $planData['cycle_count'] = $customDiscounts ?: $planData['cycle_count'];
         }
 
-        return $planData;
+        return $this->unSerializeData($planData);
     }
 
     public function prepareRemainingDays($data) {
@@ -120,7 +121,7 @@ trait FailsafeHelper {
         $data['sync'] = false;
         $data['process_type'] = 'store-charge';
         $charge = DB::connection('app-manager-sqlite')->table('charges')->insert($data);
-        return response()->json(['message' => $charge ? 'success' : 'fail'], $charge ? 201 : 422);
+        return ['message' => $charge ? 'success' : 'fail'];
     }
 
     public function cancelChargeHelper($shop_domain, $plan_id) {
@@ -129,9 +130,8 @@ trait FailsafeHelper {
             ->update([
                 'status' => 'cancelled',
                 'cancelled_on' => Carbon::now(),
-                'sync' => false
             ]);
-        return response()->json(['message' => $charge ? 'success' : 'fail'], $charge ? 201 : 422);
+        return ['message' => $charge ? 'success' : 'fail'];
     }
 
     public function syncAppManager() {
@@ -167,5 +167,23 @@ trait FailsafeHelper {
         \Storage::put('app-manager/database.sqlite','');
 
         Artisan::call('migrate', ['--database' => 'app-manager-sqlite', '--path' => "/vendor/hulkapps/appmanager/migrations"]);
+    }
+
+    public function serializeData ($data) {
+        foreach ($data as $index => $datum) {
+            if (gettype($datum) == 'array') {
+                $data[$index] = json_encode($datum);
+            }
+        }
+        return $data;
+    }
+
+    public function unSerializeData ($data) {
+        foreach ($data as $index => $datum) {
+            if (in_array($index, ['interval', 'shopify_plans', 'affiliate', 'feature_plan'])) {
+                $data[$index] = json_decode($datum, true);
+            }
+        }
+        return $data;
     }
 }

@@ -35,10 +35,11 @@ class CreateAppManagerTables extends Migration
 			$table->boolean('public')->default(true);
 			$table->integer('discount')->nullable();
 			$table->smallInteger('cycle_count')->nullable();
-			$table->enum('discount_type', ['fixed_amount', 'percentage'])->nullable();
+			$table->enum('discount_type', ['amount', 'percentage'])->nullable();
 			$table->boolean('store_base_plan')->nullable();
 			$table->text('affiliate')->nullable();
 			$table->text('feature_plan')->nullable();
+			$table->dateTime('deleted_at')->nullable();
 			$table->timestamps();
 		});
 
@@ -60,7 +61,7 @@ class CreateAppManagerTables extends Migration
 			$table->unsignedBigInteger('plan_id');
 			$table->text('description')->nullable();
 			$table->string('shop_domain');
-			$table->boolean('sync')->default(false);
+			$table->boolean('sync')->default(true);
             $table->string('process_type')->nullable();
 			$table->timestamps();
 		});
@@ -68,7 +69,7 @@ class CreateAppManagerTables extends Migration
         Schema::create('discount_plan', function (Blueprint $table) {
 			$table->id();
 			$table->smallInteger('discount');
-			$table->enum('discount_type', ['fixed_amount', 'percentage']);
+			$table->enum('discount_type', ['amount', 'percentage']);
 			$table->smallInteger('cycle_count')->nullable();
 			$table->unsignedBigInteger('created_by');
 			$table->string('shop_domain');

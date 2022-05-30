@@ -151,15 +151,6 @@ class PlanController extends Controller
         DB::connection('app-manager-sqlite')->table('trial_extension')->insert($extend_trials);
     }
 
-    public function serializeData ($data) {
-        foreach ($data as $index => $datum) {
-            if (gettype($datum) == 'array') {
-                $data[$index] = json_encode($datum);
-            }
-        }
-        return $data;
-    }
-
     public function filterData($data) {
         $data = collect($data)->map(function ($value, $key) {
             return collect($value)->forget('app_id')->toArray();
