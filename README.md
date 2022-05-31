@@ -37,7 +37,9 @@ In the case that config/app-manager.php is already present, delete it and then r
 Don't forget to update secret on file `config/app-manager.php`
 
 #### 2.Initialize App Features
-According to the example in the file, list all features of the app in `config/plan-features.php.` Make sure to use the UIID from this sheet.
+According to the example in the file, list all features of the app in `config/plan-features.php`.
+
+Ensure you use the UIID from this <a href="https://docs.google.com/spreadsheets/d/1cw2nSKxAHTGn4Cfa98RNdtfHT3zdtwu9bQD7s7hErXc/edit#gid=0">sheet</a>, and don't forget to mention the app name after using the UUID
 
 #### 3.Initialize Fail-safe Database
 Initialize SQLite Fail-safe database in `config/database.php` 

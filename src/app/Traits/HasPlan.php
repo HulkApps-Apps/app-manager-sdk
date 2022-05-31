@@ -35,8 +35,12 @@ trait HasPlan
             return [];
         }
 
-        $featuresByPlan = collect($planData['features'])->pluck('value', 'feature_id')->keys()->toArray();
-        return collect(config('plan_features'))->whereIn('uuid', $featuresByPlan)->toArray();
+        $featuresByPlan = collect($planData['features'])->pluck('value', 'feature_id')->toArray();
+        $planFeatures = collect(config('plan_features'))->whereIn('uuid', array_keys($featuresByPlan))->keyBy('uuid')->toArray();
+        foreach ($planFeatures as $index => $planFeature) {
+            $planFeatures[$index]['value'] = $featuresByPlan[$index] ?? null;
+        }
+        return array_values($planFeatures);
     }
 
     public function hasFeature($slug) {
