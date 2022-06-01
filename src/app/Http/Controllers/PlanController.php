@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use HulkApps\AppManager\app\Traits\FailsafeHelper;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -108,8 +109,8 @@ class PlanController extends Controller
     }
 
     public function burstCache(Request $request) {
-        Cache::forget('app-manager');
 
+        Artisan::call('cache:clear');
         return true;
     }
 
