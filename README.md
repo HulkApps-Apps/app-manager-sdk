@@ -110,7 +110,8 @@ If you discover any security related issues, please email divyank@hulkapps.com i
 
 ## Credits
 
--   [Divyank](https://github.com/hulkapps)
+-   [Chirag](https://github.com/chirag-hulkapps)
+-   [HulkApps](https://github.com/dv-hulkapps)
 -   [All Contributors](../../contributors)
 
 ## License
