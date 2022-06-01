@@ -26,8 +26,8 @@ class CreateAppManagerTables extends Migration
 			$table->double('price', 8, 2);
 			$table->string('offer_text')->nullable();
 			$table->text('interval');
-			$table->text('shopify_plans');
-			$table->integer('trial_days');
+			$table->text('shopify_plans')->nullable();
+			$table->integer('trial_days')->default(0);
 			$table->integer('test')->nullable();
 			$table->dateTime('on_install')->nullable();
 			$table->boolean('is_custom')->default(false);
