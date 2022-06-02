@@ -30,10 +30,10 @@ class PlanController extends Controller
         $cacheKey = $request->has('shop_domain') ? 'app-manager.plans-'.$request->get('shop_domain') : 'app-manager.all-plans';
 
         $response = Cache::rememberForever($cacheKey, function () use ($request, $shopTableName, $storeFieldName, $planFieldName, $shopifyPlanFieldName, $cacheKey) {
-            $shopify_plan = $plan = null;
-            $plans = \AppManager::getPlans();
+            $shopify_plan = $plan = $plans = null;
 
             if ($request->has('shop_domain')) {
+                $plans = \AppManager::getPlans($request->get('shop_domain'));
                 $shopDomain = $request->get('shop_domain');
                 $userData = DB::table($shopTableName)->where($storeFieldName, $shopDomain)->get();
                 $shopify_plan = collect($userData)->pluck($shopifyPlanFieldName)->first();
