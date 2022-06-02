@@ -93,7 +93,7 @@ class ChargeController extends Controller
                                     'value' => [
                                         $discount_type => $discount_type === "percentage" ? (float)$plan['discount'] / 100 : $plan['discount'],
                                     ],
-                                    'durationLimitInIntervals' => ($plan['discount_interval'] ?? null)
+                                    'durationLimitInIntervals' => ($plan['cycle_count'] ?? null)
                                 ] : [],
                                 'interval' => $plan['interval']['value'],
                             ]),
