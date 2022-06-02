@@ -3,6 +3,7 @@
 namespace HulkApps\AppManager\app\Http\Controllers;
 
 use Carbon\Carbon;
+use HulkApps\AppManager\app\Events\PlanActivated;
 use HulkApps\AppManager\Client\Client;
 use HulkApps\AppManager\Exception\ChargeException;
 use HulkApps\AppManager\Exception\GraphQLException;
@@ -70,7 +71,9 @@ class ChargeController extends Controller
             $discount_type = $plan['discount_type'] ?? "percentage";
 
             $shopifyPlan = $shop->$storeShopifyPlanField;
-            $test = null;
+
+            $test = app()->environment('development', 'local');
+
             if (!empty($plan['affiliate'])) {
                 $test = in_array($shopifyPlan, array_column($plan['affiliate'], 'value')) ? true : null;
             }
@@ -79,7 +82,6 @@ class ChargeController extends Controller
                 'name' => $plan['name'],
                 'returnUrl' => route('app-manager.plan.callback')."?".http_build_query($requestData, '', '&', PHP_QUERY_RFC3986),
                 'trialDays' => $trialDays,
-//                'test' => $plan['test'],
                 'test' => $test,
                 'lineItems' => [
                     [
@@ -151,6 +153,8 @@ class ChargeController extends Controller
             if ($data['message'] === "success") {
 
                 DB::table($tableName)->where($storeName, $request->shop)->update([$storePlanField => $request->plan]);
+
+                event(new PlanActivated($plan, $charge));
             }
         } else throw new ChargeException("Invalid charge");
 
