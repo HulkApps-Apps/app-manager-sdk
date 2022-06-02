@@ -22,9 +22,9 @@ class AppManager
         return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : json_decode($this->prepareMarketingBanners());
     }
 
-    public function getPlans() {
+    public function getPlans($shop_domain) {
 
-        $data = $this->client->get('plans');
+        $data = $this->client->get('plans', ['shop_domain' => $shop_domain]);
         return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->preparePlans();
     }
 
