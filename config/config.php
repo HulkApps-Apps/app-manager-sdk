@@ -79,6 +79,7 @@ return [
         'plan_id' => env('PLAN_ID', 'plan_id'), // 1
         'created_at' => env('CREATED_AT', 'created_at'), // 2022-04-15 10:43:05
         'trial_activated_at' => env('TRIAL_ACTIVATED_AT', 'trial_activated_at'), // 2022-04-15 10:43:05
+        'grandfathered' => env('GRAND_FATHERED', 'grandfathered'), // true
     ],
 
     /*

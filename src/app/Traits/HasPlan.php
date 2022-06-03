@@ -3,13 +3,15 @@
 namespace HulkApps\AppManager\app\Traits;
 
 use HulkApps\AppManager\Exception\MissingPlanException;
-use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
+
 
 trait HasPlan
 {
     public function hasPlan() {
+        $shopify_fields = config('app-manager.field_names');
+        if ($this->{$shopify_fields['grandfathered']}) {
+            return true;
+        }
         if (!$this->plan_id) {
             return false;
         }
@@ -17,7 +19,6 @@ trait HasPlan
         if ($remainingDays > 0) {
             return true;
         }
-        $shopify_fields = config('app-manager.field_names');
         $activeCharge = \AppManager::getCharge($this->{$shopify_fields['name']});
         return $activeCharge ? true : false;
     }
