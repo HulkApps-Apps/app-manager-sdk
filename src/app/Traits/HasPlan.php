@@ -70,4 +70,15 @@ trait HasPlan
 
         return \AppManager::getRemainingDays($shop_domain, $trial_activated_at, $plan_id);
     }
+
+    public function getPlanData() {
+        $planId = $this->plan_id;
+        return \AppManager::getPlan($planId);
+    }
+
+    public function getChargeData() {
+        $shopify_fields = config('app-manager.field_names');
+        $shop_domain = $this->{$shopify_fields['name']};
+        return \AppManager::getCharge($shop_domain);
+    }
 }
