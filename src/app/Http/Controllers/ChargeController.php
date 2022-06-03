@@ -153,8 +153,9 @@ class ChargeController extends Controller
             if ($data['message'] === "success") {
 
                 DB::table($tableName)->where($storeName, $request->shop)->update([$storePlanField => $request->plan]);
+                $chargeData = \AppManager::getCharge($shop->$storeName);
 
-                event(new PlanActivated($plan, $charge));
+                event(new PlanActivated($plan, $charge, $chargeData ? ($chargeData['cancelled_charge'] ?? null) : null));
             }
         } else throw new ChargeException("Invalid charge");
 
