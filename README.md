@@ -52,6 +52,21 @@ Initialize SQLite Fail-safe database in `config/database.php`
 ];
 ```
 
+#### 4.Listen Plan Activation Event
+Listen and Register plan activation event in `app/Providers/EventServiceProvider`.
+
+```php
+use HulkApps\AppManager\app\Events\PlanActivated;
+
+class EventServiceProvider extends ServiceProvider {
+    protected $listen = [
+		PlanActivated::class => [
+			PlanActivatedListener::class,
+		],
+	];
+}
+``` 
+
 <a name="step4"></a>
 ### Usage
 Plan and feature helper functions are provided in this package.
@@ -77,6 +92,10 @@ $user->hasFeature($featureSlug); // Return the user has given the feature or not
 $user->getFeature($featureSlug); // Return data for a feature
 
 $user->getRemainingDays(); // Calculate the remaining days of the active plan
+
+$user->getPlanData(); // Return plan details
+
+$user->getChargeData(); // Return active and recent cancelled charge
 ```
 
 <a name="step5"></a>
@@ -87,7 +106,7 @@ Initialize the task scheduling.
 
 There may be permission issues with database storage, so change permissions on the storage directory
 ```bash
-sudo chown -R www-data:www-data storage
+sudo chown -R www-data:www-data storage/app/app-manager
 ``` 
 
 ### Testing

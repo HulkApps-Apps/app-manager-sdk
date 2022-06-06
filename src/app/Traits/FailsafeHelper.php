@@ -113,8 +113,12 @@ trait FailsafeHelper {
     }
 
     public function getChargeHelper($shop_domain) {
-        return DB::connection('app-manager-sqlite')->table('charges')
-                ->where('shop_domain', $shop_domain)->where('status', 'active')->first() ?? null;
+        $chargeData = DB::connection('app-manager-sqlite')->table('charges')
+                ->where('shop_domain', $shop_domain)->get();
+        return [
+            'active_charge' => collect($chargeData)->where('status', 'active')->first() ?? null,
+            'cancelled_charge' => collect($chargeData)->where('status', 'cancelled')->sortByDesc('created_at')->first() ?? null
+        ];
     }
 
     public function storeChargeHelper($data) {
