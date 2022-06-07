@@ -153,6 +153,9 @@ class PlanController extends Controller
 
         $extend_trials = $this->filterData($data['extend_trials']);
         DB::connection('app-manager-sqlite')->table('trial_extension')->insert($extend_trials);
+
+        $plan_users = $this->filterData($data['plan_users']);
+        DB::connection('app-manager-sqlite')->table('plan_user')->insert($plan_users);
     }
 
     public function filterData($data) {

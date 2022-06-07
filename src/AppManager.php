@@ -33,11 +33,11 @@ class AppManager
 
         try {
             $data = $this->client->get('plans', ['shop_domain' => $shop_domain]);
-            return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->preparePlans();
+            return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->preparePlans($shop_domain);
         }
         catch (\Exception $e) {
             report($e);
-            return $this->preparePlans();
+            return $this->preparePlans($shop_domain);
         }
     }
 

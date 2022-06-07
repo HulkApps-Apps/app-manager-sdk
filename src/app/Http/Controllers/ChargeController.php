@@ -11,6 +11,7 @@ use HulkApps\AppManager\GraphQL\GraphQL;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redirect;
 
@@ -95,7 +96,7 @@ class ChargeController extends Controller
                                     'value' => [
                                         $discount_type => $discount_type === "percentage" ? (float)$plan['discount'] / 100 : $plan['discount'],
                                     ],
-                                    'durationLimitInIntervals' => ($plan['cycle_count'] ?? null)
+                                    'durationLimitInIntervals' => ((int)$plan['cycle_count'] ?? 0)
                                 ] : [],
                                 'interval' => $plan['interval']['value'],
                             ]),
@@ -152,6 +153,7 @@ class ChargeController extends Controller
 
             if ($data['message'] === "success") {
 
+                Artisan::call('cache:clear');
                 DB::table($tableName)->where($storeName, $request->shop)->update([$storePlanField => $request->plan]);
                 $chargeData = \AppManager::getCharge($shop->$storeName);
 

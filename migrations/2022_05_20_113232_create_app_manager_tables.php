@@ -86,6 +86,14 @@ class CreateAppManagerTables extends Migration
 			$table->dateTime('extend_trial_start_at')->nullable();
 			$table->timestamps();
 		});
+
+        Schema::create('plan_user', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('plan_id');
+            $table->unsignedBigInteger('created_by');
+            $table->string('shop_domain');
+            $table->timestamps();
+        });
     }
 
 	/**
@@ -100,5 +108,6 @@ class CreateAppManagerTables extends Migration
 		Schema::dropIfExists('charges');
 		Schema::dropIfExists('discount_plan');
 		Schema::dropIfExists('trial_extension');
+		Schema::dropIfExists('plan_user');
 	}
 }

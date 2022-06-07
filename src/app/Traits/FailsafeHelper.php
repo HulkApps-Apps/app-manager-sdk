@@ -13,10 +13,25 @@ trait FailsafeHelper {
         return head($marketingBannersData)->marketing_banners ?? null;
     }
 
-    public function preparePlans() {
-        $plans = DB::connection('app-manager-sqlite')->table('plans')
-            ->where('public', 1)->get()->toArray();
-        $plans = json_decode(json_encode($plans), true);
+    public function preparePlans($shop_domain) {
+        $activePlanId = DB::connection('app-manager-sqlite')->table('charges')
+            ->where('shop_domain', $shop_domain)->pluck('plan_id')->first();
+        $customPlanIds = DB::connection('app-manager-sqlite')->table('plan_user')
+            ->where('shop_domain', $shop_domain)->pluck('plan_id')->toArray();
+        $customPlanBaseIds = DB::connection('app-manager-sqlite')->table('plans')
+            ->whereIn('id', $customPlanIds)->whereNotNull('base_plan')->pluck('base_plan')->toArray();
+
+        if ($activePlanId && ($key = array_search($activePlanId, $customPlanBaseIds)) !== false) {
+            unset($customPlanBaseIds[$key]);
+        }
+
+        $plans = DB::connection('app-manager-sqlite')->table('plans')->where(function ($query) use ($customPlanIds) {
+            $query->where('public', 1)
+                ->orWhereIn('id', $customPlanIds);
+        })->when(!empty($customPlanBaseIds), function ($query) use ($customPlanBaseIds) {
+            $query->whereNotIn('id', $customPlanBaseIds);
+        })->get()->toArray();
+
         $featuresByPlans = collect($plans)->pluck('feature_plan')->toArray();
         $temp = [];
         foreach ($featuresByPlans as $index => $featuresByPlan) {
@@ -39,6 +54,7 @@ trait FailsafeHelper {
             $featuresByPlans = collect($featuresByPlans)->groupBy('plan_id')->toArray();
         }
 
+        $plans = json_decode(json_encode($plans), true);
         foreach ($plans as $key => $plan) {
             $plans[$key]['interval'] = json_decode($plan['interval'], true)['value'];
             $plans[$key]['shopify_plans'] = collect(json_decode($plan['shopify_plans'], true))->pluck('value')->toArray();
@@ -56,13 +72,14 @@ trait FailsafeHelper {
 
         if ($planData && $shopDomain) {
             $planData = json_decode(json_encode($planData), true);
-//			$planData = $planData->toArray();
             $customDiscounts = DB::connection('app-manager-sqlite')->table('discount_plan')
-                ->where('plan_id', $planData['id'])->where('shop_domain', $shopDomain)
-                ->select(['discount', 'discount_type', 'cycle_count'])->first();
-            $planData['discount'] = $customDiscounts ?: $planData['discount'];
-            $planData['discount_type'] = $customDiscounts ?: $planData['discount_type'];
-            $planData['cycle_count'] = $customDiscounts ?: $planData['cycle_count'];
+                ->where('shop_domain', $shopDomain)->select(['plan_id', 'discount', 'discount_type', 'cycle_count'])->first();
+            $customDiscounts = json_decode(json_encode($customDiscounts), true);
+            if (!empty($customDiscounts) && ($customDiscounts['plan_id'] == -1 || $planData['id'] == $customDiscounts['plan_id'])) {
+                $planData['discount'] = isset($customDiscounts['discount']) ? $customDiscounts['discount'] : $planData['discount'];
+                $planData['discount_type'] = isset($customDiscounts['discount_type']) ? $customDiscounts['discount_type'] : $planData['discount_type'];
+                $planData['cycle_count'] = isset($customDiscounts['cycle_count']) ? $customDiscounts['cycle_count'] : $planData['cycle_count'];
+            }
         }
 
         return $this->unSerializeData($planData);
@@ -114,7 +131,7 @@ trait FailsafeHelper {
 
     public function getChargeHelper($shop_domain) {
         $chargeData = DB::connection('app-manager-sqlite')->table('charges')
-                ->where('shop_domain', $shop_domain)->get();
+            ->where('shop_domain', $shop_domain)->get();
         return [
             'active_charge' => collect($chargeData)->where('status', 'active')->first() ?? null,
             'cancelled_charge' => collect($chargeData)->where('status', 'cancelled')->sortByDesc('created_at')->first() ?? null
