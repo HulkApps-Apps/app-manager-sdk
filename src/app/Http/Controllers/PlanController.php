@@ -69,13 +69,16 @@ class PlanController extends Controller
     }
 
     public function users(Request $request) {
+
         $search = $request->get('search') ?? null;
         $tableName = config('app-manager.shop_table_name', 'users');
         $shopify_fields = config('app-manager.field_names');
+
         $users = DB::table($tableName)->when($search, function ($q) use ($shopify_fields, $search) {
             return $q->where(($shopify_fields['name'] ?? 'name'), 'like', '%'.$search.'%')
                 ->orWhere(($shopify_fields['shopify_email'] ?? 'shopify_email'), 'like', '%'.$search.'%');
         })->paginate(10);
+
         $users->getCollection()->transform(function ($user) use ($shopify_fields) {
             foreach ($shopify_fields as $key => $shopify_field) {
                 if ($key !== $shopify_field) {
@@ -150,6 +153,9 @@ class PlanController extends Controller
 
         $extend_trials = $this->filterData($data['extend_trials']);
         DB::connection('app-manager-sqlite')->table('trial_extension')->insert($extend_trials);
+
+        $plan_users = $this->filterData($data['plan_users']);
+        DB::connection('app-manager-sqlite')->table('plan_user')->insert($plan_users);
     }
 
     public function filterData($data) {

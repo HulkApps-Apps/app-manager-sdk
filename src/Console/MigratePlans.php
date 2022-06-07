@@ -112,8 +112,8 @@ class MigratePlans extends Command
 
             // fetch stored charge
             $storedCharge = \AppManager::getCharge($shop_domain);
-            if ($storedCharge) {
-                $preparedCharge['id'] = $storedCharge['id'];
+            if ($storedCharge && isset($storedCharge['active_charge'])) {
+                $preparedCharge['id'] = $storedCharge['active_charge']['id'] ?? null;
             }
 
             try {

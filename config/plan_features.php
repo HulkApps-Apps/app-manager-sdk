@@ -16,6 +16,7 @@ return [
       "description" => "Feature Description",
       "value_type" => "integer",
       "format" => "count",
-      "display_order" => 1
+      "display_order" => 1,
+      "hidden_feature" => false
   ],
 ];
