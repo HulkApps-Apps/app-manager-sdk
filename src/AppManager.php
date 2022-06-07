@@ -23,11 +23,9 @@ class AppManager
             $data = $this->client->get('static-contents');
             return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : json_decode($this->prepareMarketingBanners());
         }
-        catch (ConnectionException $exception) {
-            return json_decode($this->prepareMarketingBanners());
-        }
         catch (\Exception $e) {
             report($e);
+            return json_decode($this->prepareMarketingBanners());
         }
     }
 
@@ -37,11 +35,9 @@ class AppManager
             $data = $this->client->get('plans', ['shop_domain' => $shop_domain]);
             return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->preparePlans();
         }
-        catch (ConnectionException $exception) {
-            return $this->preparePlans();
-        }
         catch (\Exception $e) {
             report($e);
+            return $this->preparePlans();
         }
     }
 
@@ -51,11 +47,9 @@ class AppManager
             $data = $this->client->get('plan', ['plan_id' => $plan_id, 'shop_domain' => $shop_domain]);
             return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->preparePlan(['plan_id' => $plan_id, 'shop_domain' => $shop_domain]);
         }
-        catch (ConnectionException $exception) {
-            return $this->preparePlan(['plan_id' => $plan_id, 'shop_domain' => $shop_domain]);
-        }
         catch (\Exception $e) {
             report($e);
+            return $this->preparePlan(['plan_id' => $plan_id, 'shop_domain' => $shop_domain]);
         }
     }
 
@@ -65,11 +59,9 @@ class AppManager
             $data = $this->client->post('store-charge', $payload);
             return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->storeChargeHelper($payload);
         }
-        catch (ConnectionException $exception) {
-            return $this->storeChargeHelper($payload);
-        }
         catch (\Exception $e) {
             report($e);
+            return $this->storeChargeHelper($payload);
         }
     }
 
@@ -82,11 +74,9 @@ class AppManager
             ]);
             return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->cancelChargeHelper($shop_domain, $plan_id);
         }
-        catch (ConnectionException $exception) {
-            return $this->cancelChargeHelper($shop_domain, $plan_id);
-        }
         catch (\Exception $e) {
             report($e);
+            return $this->cancelChargeHelper($shop_domain, $plan_id);
         }
     }
 
@@ -111,15 +101,13 @@ class AppManager
                 'plan_id' => $plan_id
             ]);
         }
-        catch (ConnectionException $exception) {
+        catch (\Exception $e) {
+            report($e);
             return $this->prepareRemainingDays([
                 'shop_domain' => $shop_domain,
                 'trial_activated_at' => $trial_activated_at,
                 'plan_id' => $plan_id
             ]);
-        }
-        catch (\Exception $e) {
-            report($e);
         }
     }
 
@@ -131,11 +119,9 @@ class AppManager
             ]);
             return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->getChargeHelper($shop_domain);
         }
-        catch (ConnectionException $exception) {
-            return $this->getChargeHelper($shop_domain);
-        }
         catch (\Exception $e) {
             report($e);
+            return $this->getChargeHelper($shop_domain);
         }
     }
 

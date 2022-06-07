@@ -102,8 +102,6 @@ $user->getChargeData(); // Return active and recent cancelled charge
 ### Extras
 Set Shopify API version to 2022-04.
 
-Initialize the task scheduling.
-
 There may be permission issues with database storage, so change permissions on the storage directory
 ```bash
 sudo chown -R www-data:www-data storage/app/app-manager
