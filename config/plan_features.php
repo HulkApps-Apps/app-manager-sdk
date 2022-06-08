@@ -5,7 +5,7 @@
 /*
  * Feature list
  *
- * Values type : integer, boolean, string
+ * Values type : integer, boolean, string, array
  * Format: percentage, count, string
  * */
 return [
@@ -17,6 +17,8 @@ return [
       "value_type" => "integer",
       "format" => "count",
       "display_order" => 1,
-      "hidden_feature" => false
+      "hidden_feature" => false,
+      "group_order" => "1",
+      "group" => "Group Name",
   ],
 ];
