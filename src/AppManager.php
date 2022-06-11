@@ -125,6 +125,11 @@ class AppManager
         }
     }
 
+    // for migration only
+    public function getCharges() {
+        return $this->client->get('get-charges')->json();
+    }
+
     public function getStatus() {
         return $this->client->get('get-status');
     }

@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use HulkApps\AppManager\Client\Client;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class MigratePlans extends Command
 {
@@ -33,7 +34,7 @@ class MigratePlans extends Command
         $plans = json_decode(json_encode($plans), true);
         $charges = json_decode(json_encode($charges), true);
 
-        // fetch stored plans
+        // --------------------------------- Plans ---------------------------------
         $response = $client->get("admin/plans?limit=100");
         if ($response->getStatusCode() != 200) {
             dd(json_encode($response->json()));
@@ -84,11 +85,14 @@ class MigratePlans extends Command
             sleep(2);
         }
 
+        // --------------------------------- Charges ---------------------------------
+        $storedCharges = \AppManager::getCharges();
         foreach ($charges as $index => $charge) {
 
             $this->progressBar($index, count($charges), 'Charges');
             $shop_domain = $shopTableName == 'users' ? ($userData[$charge['user_id']] ?? null) : ($shopTableName == 'shops' ? ($userData[$charge['shop_id']] ?? null) : null);
             $preparedCharge = [
+                'id' => $storedCharges[$charge['id']] ?? null,
                 'charge_id' => $charge['charge_id'],
                 'test' => $charge['test'] ?? 0,
                 'status' => $charge['status'] ?? null,
@@ -101,31 +105,27 @@ class MigratePlans extends Command
                 'trial_ends_on' => Carbon::parse($charge['trial_ends_on'])->format('Y-m-d') ?? null,
                 'activated_on' => Carbon::parse($charge['activated_on'])->format('Y-m-d') ?? null,
                 'cancelled_on' => Carbon::parse($charge['cancelled_on'])->format('Y-m-d') ?? null,
-                'expires_on' => $charge['expires_on'] ?? null,
+                'expires_on' => Carbon::parse($charge['expires_on'])->format('Y-m-d') ?? null,
                 'description' => $charge['description'] ?? null,
                 'shop_domain' => $shop_domain,
-                'created_at' => $charge['created_at'] ?? null,
-                'updated_at' => $charge['updated_at'] ?? null,
+                'created_at' => Carbon::parse($charge['created_at'])->format('Y-m-d') ?? null,
+                'updated_at' => Carbon::parse($charge['updated_at'])->format('Y-m-d') ?? null,
                 'plan_id' => $storedPlans[$charge['plan_id']] ?? null,
-				'migration' => true,
+                'old_charge_id' => $charge['id'],
+                'migration' => true,
             ];
-
-            // fetch stored charge
-            $storedCharge = \AppManager::getCharge($shop_domain);
-            if ($storedCharge && isset($storedCharge['active_charge'])) {
-                $preparedCharge['id'] = $storedCharge['active_charge']['id'] ?? null;
-            }
 
             $this->storeChargeHelper($client, $preparedCharge, $charge);
             sleep(2);
         }
 
+        // --------------------------------- Plan Features ---------------------------------
         foreach ($storedPlans as $index => $storedPlan) {
-
-            $this->progressBar($index, count($storedPlans), 'Plan Features');
 
             // Update plan id in users table
             DB::table($shopTableName)->where('old_plan_id', $index)->update(['plan_id' => $storedPlan]);
+
+            $this->progressBar($index, count($storedPlans), 'Plan Features');
 
             // Prepare and Add plan features
             $featurePlans = DB::table('plan_feature')->where('plan_id', $index)->get()->toArray();
@@ -167,6 +167,10 @@ class MigratePlans extends Command
         // log errors
         if ($this->errors) {
             $response = $client->post("store-migration-log", $this->errors);
+            if ($response->getStatusCode() != 200) {
+                dump($response);
+            }
+            Log::error(json_encode($this->errors));
             dump($this->errors);
         }
     }
