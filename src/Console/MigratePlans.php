@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use HulkApps\AppManager\Client\Client;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class MigratePlans extends Command
 {
@@ -33,22 +34,20 @@ class MigratePlans extends Command
         $plans = json_decode(json_encode($plans), true);
         $charges = json_decode(json_encode($charges), true);
 
-        // fetch stored plans
+        // --------------------------------- Plans ---------------------------------
         $response = $client->get("admin/plans?limit=100");
         if ($response->getStatusCode() != 200) {
             dd(json_encode($response->json()));
         }
         $data = $response->json()['data'];
-        foreach ($data as $row) {
-            $storedPlans[$row['name'] . '#' . $row['interval']['value'] . '#' . ($row['public'] ? 1 : 0)] = $row['id'];
-        }
+        $storedPlans = collect($data)->whereNotNull('old_plan_id')->pluck('id', 'old_plan_id')->toArray();
 
-        $migratedPlans = [];
         foreach ($plans as $index => $plan) {
 
             $this->progressBar($index, count($plans), 'Plans');
             $preparedPlan = [
-                'id' => $storedPlans[$plan['name'] . '#' . $plan['interval'] . '#' . (isset($plan['public']) ? $plan['public'] : 1)] ?? null,
+                'id' => $storedPlans[$plan['id']] ?? null,
+				'old_plan_id' => $plan['id'],
                 'type' => $plan['type'],
                 'name' => $plan['name'],
                 'price' => $plan['price'],
@@ -67,29 +66,33 @@ class MigratePlans extends Command
                 'cycle_count' => $plan['cycle_count'] ?? null,
                 'discount_type' => $plan['discount_type'] ?? null,
                 'affiliate' => $plan['affiliate'] ?? null,
+				'migration' => true
             ];
 
             try {
                 $response = $client->post("admin/plans/modify", $preparedPlan);
                 if (in_array($response->getStatusCode(), [200, 201])) {
                     $response = $response->json();
-                    $migratedPlans[$plan['id']] = $response['plan']['id'] ?? 0;
+                    $storedPlans[$plan['id']] = $response['plan']['id'] ?? null;
                 }
                 else {
-                    $this->handleError($response, 'plan', $plan, $preparedPlan);
+                    $this->handleError($response->json(), $response->getStatusCode(), 'plan', $plan, $preparedPlan);
                 }
             }
             catch (\Exception $e) {
-                $this->handleError($response, 'plan', $plan, $preparedPlan);
+                $this->handleError($response->json(), $response->getStatusCode(), 'plan', $plan, $preparedPlan);
             }
-            sleep(1);
+            sleep(2);
         }
 
+        // --------------------------------- Charges ---------------------------------
+        $storedCharges = \AppManager::getCharges();
         foreach ($charges as $index => $charge) {
 
             $this->progressBar($index, count($charges), 'Charges');
             $shop_domain = $shopTableName == 'users' ? ($userData[$charge['user_id']] ?? null) : ($shopTableName == 'shops' ? ($userData[$charge['shop_id']] ?? null) : null);
             $preparedCharge = [
+                'id' => $storedCharges[$charge['id']] ?? null,
                 'charge_id' => $charge['charge_id'],
                 'test' => $charge['test'] ?? 0,
                 'status' => $charge['status'] ?? null,
@@ -102,53 +105,42 @@ class MigratePlans extends Command
                 'trial_ends_on' => Carbon::parse($charge['trial_ends_on'])->format('Y-m-d') ?? null,
                 'activated_on' => Carbon::parse($charge['activated_on'])->format('Y-m-d') ?? null,
                 'cancelled_on' => Carbon::parse($charge['cancelled_on'])->format('Y-m-d') ?? null,
-                'expires_on' => $charge['expires_on'] ?? null,
+                'expires_on' => Carbon::parse($charge['expires_on'])->format('Y-m-d') ?? null,
                 'description' => $charge['description'] ?? null,
                 'shop_domain' => $shop_domain,
-                'created_at' => $charge['created_at'] ?? null,
-                'updated_at' => $charge['updated_at'] ?? null,
-                'plan_id' => $migratedPlans[$charge['plan_id']] ?? null,
+                'created_at' => Carbon::parse($charge['created_at'])->format('Y-m-d') ?? null,
+                'updated_at' => Carbon::parse($charge['updated_at'])->format('Y-m-d') ?? null,
+                'plan_id' => $storedPlans[$charge['plan_id']] ?? null,
+                'old_charge_id' => $charge['id'],
+                'migration' => true,
             ];
 
-            // fetch stored charge
-            $storedCharge = \AppManager::getCharge($shop_domain);
-            if ($storedCharge && isset($storedCharge['active_charge'])) {
-                $preparedCharge['id'] = $storedCharge['active_charge']['id'] ?? null;
-            }
-
-            try {
-                $response = $client->post("store-charge", $preparedCharge);
-                if ($response->getStatusCode() != 201) {
-                    $this->handleError($response, 'charge', $charge, $preparedCharge);
-                }
-            }
-            catch (\Exception $e) {
-                $this->handleError($response, 'charge', $charge, $preparedCharge);
-            }
-            sleep(1);
+            $this->storeChargeHelper($client, $preparedCharge, $charge);
+            sleep(2);
         }
 
-        foreach ($migratedPlans as $index => $migratedPlan) {
-
-            $this->progressBar($index, count($migratedPlans), 'Plan Features');
+        // --------------------------------- Plan Features ---------------------------------
+        foreach ($storedPlans as $index => $storedPlan) {
 
             // Update plan id in users table
-            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-            DB::table('plans')->where('id', $index)->update(['id' => $migratedPlan]);
-            DB::table('charges')->where('plan_id', $index)->update(['plan_id' => $migratedPlan]);
-            DB::table('plan_feature')->where('plan_id', $index)->update(['plan_id' => $migratedPlan]);
-            DB::table($shopTableName)->where('plan_id', $index)->update(['plan_id' => $migratedPlan]);
-            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+            DB::table($shopTableName)->where('old_plan_id', $index)->update(['plan_id' => $storedPlan]);
+
+            $this->progressBar($index, count($storedPlans), 'Plan Features');
 
             // Prepare and Add plan features
-            $featurePlans = DB::table('plan_feature')->where('plan_id', $migratedPlan)->get()->toArray();
+            $featurePlans = DB::table('plan_feature')->where('plan_id', $index)->get()->toArray();
             $featurePlans = json_decode(json_encode($featurePlans), true);
             $featurePlans = collect($featurePlans)->pluck('value', 'feature_id')->toArray();
 
             foreach ($features as $key => $feature) {
                 if (isset($featurePlans[$feature['id']])) {
                     $features[$key]['selected'] = true;
-                    $features[$key]['inputValue'] = $featurePlans[$feature['id']];
+                    if (in_array($features[$key]['value_type'], ['double', 'integer'])) {
+                        $features[$key]['inputValue'] = (int)$featurePlans[$feature['id']];
+                    }
+                    else {
+                        $features[$key]['inputValue'] = $featurePlans[$feature['id']];
+                    }
                 }
                 else {
                     $features[$key]['selected'] = false;
@@ -157,30 +149,35 @@ class MigratePlans extends Command
             }
             $data = [
                 'features' => $features,
-                'plan_id' => $migratedPlan
+                'plan_id' => $storedPlan,
+                'migration' => true,
             ];
             try {
                 $response = $client->post("admin/plans/configure", $data);
                 if ($response->getStatusCode() != 200) {
-                    $this->handleError($response, 'plan-configure', $migratedPlan, $features);
+                    $this->handleError($response->json(), $response->getStatusCode(), 'plan-configure', $storedPlan, $features);
                 }
             }
             catch (\Exception $e) {
-                $this->handleError($response, 'plan-configure', $migratedPlan, $features);
+                $this->handleError($response->json(), $response->getStatusCode(), 'plan-configure', $storedPlan, $features);
             }
-            sleep(1);
+            sleep(2);
         }
 
         // log errors
         if ($this->errors) {
             $response = $client->post("store-migration-log", $this->errors);
+            if ($response->getStatusCode() != 200) {
+                dump($response);
+            }
+            Log::error(json_encode($this->errors));
             dump($this->errors);
         }
     }
 
     public function prepareShopifyPlanData($data) {
         $result = [];
-        $shopif_plan = [
+        $shopify_plan = [
             "Basic"=> "basic",
             "Affiliate"=> "affiliate",
             "NPO Full"=> "npo_full",
@@ -199,7 +196,7 @@ class MigratePlans extends Command
         ];
         $data = explode(',', str_replace('"', '', str_replace('[', '', str_replace(']', '', $data))));
 
-        foreach ($shopif_plan as $key => $plan) {
+        foreach ($shopify_plan as $key => $plan) {
             if (in_array($plan, $data)) {
                 $result[] = [
                     'label' => $key,
@@ -210,10 +207,10 @@ class MigratePlans extends Command
         return $result;
     }
 
-    public function handleError($response, $type, $data, $preparedData) {
+    public function handleError($response, $code, $type, $data, $preparedData) {
         $this->errors[] = [
-            'response' => json_encode($response->json()),
-            'status_code' => $response->getStatusCode(),
+            'response' => json_encode($response),
+            'status_code' => $code,
             'type' => $type,
             'data' => json_encode($data),
             'prepared_data' => json_encode($preparedData),
@@ -226,5 +223,21 @@ class MigratePlans extends Command
         $left = 100 - $percentage;
         $write = sprintf("\033[0G\033[2K[%'={$percentage}s>%-{$left}s] - $percentage%% - $done/$total [$comment]", "", "");
         fwrite(STDERR, $write);
+    }
+
+    public function storeChargeHelper($client, $preparedCharge, $charge, $flag = true) {
+        try {
+            $response = $client->post("store-charge", $preparedCharge);
+            if ($response->getStatusCode() != 201) {
+                $this->handleError($response->json(), $response->getStatusCode(), 'charge', $charge, $preparedCharge);
+            }
+        }
+        catch (\Exception $e) {
+            if (in_array($e->getCode(),[429, 409]) && $flag) {
+                sleep(2);
+                $this->storeChargeHelper($client, $preparedCharge, $charge, false);
+            }
+            $this->handleError($e->getMessage(), $e->getCode(), 'charge', $charge, $preparedCharge);
+        }
     }
 }

@@ -18,6 +18,7 @@ trait FailsafeHelper {
             ->where('shop_domain', $shop_domain)->pluck('plan_id')->first();
         $customPlanIds = DB::connection('app-manager-sqlite')->table('plan_user')
             ->where('shop_domain', $shop_domain)->pluck('plan_id')->toArray();
+        array_push($customPlanIds, $activePlanId ?? null);
         $customPlanBaseIds = DB::connection('app-manager-sqlite')->table('plans')
             ->whereIn('id', $customPlanIds)->whereNotNull('base_plan')->pluck('base_plan')->toArray();
 
