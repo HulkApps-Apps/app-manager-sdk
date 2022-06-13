@@ -101,22 +101,22 @@ class MigratePlans extends Command
                 'price' => $charge['price'],
                 'interval' => $charge['interval'] ?? null,
                 'trial_days' => $charge['trial_days'] ?? null,
-                'billing_on' => Carbon::parse($charge['billing_on'])->format('Y-m-d') ?? null,
-                'trial_ends_on' => Carbon::parse($charge['trial_ends_on'])->format('Y-m-d') ?? null,
-                'activated_on' => Carbon::parse($charge['activated_on'])->format('Y-m-d') ?? null,
-                'cancelled_on' => Carbon::parse($charge['cancelled_on'])->format('Y-m-d') ?? null,
-                'expires_on' => Carbon::parse($charge['expires_on'])->format('Y-m-d') ?? null,
+                'billing_on' => !empty($charge['billing_on']) ? Carbon::parse($charge['billing_on'])->format('Y-m-d') : null,
+                'trial_ends_on' => !empty($charge['trial_ends_on']) ? Carbon::parse($charge['trial_ends_on'])->format('Y-m-d') : null,
+                'activated_on' => !empty($charge['activated_on']) ? Carbon::parse($charge['activated_on'])->format('Y-m-d') : null,
+                'cancelled_on' => !empty($charge['cancelled_on']) ? Carbon::parse($charge['cancelled_on'])->format('Y-m-d') : null,
+                'expires_on' => !empty($charge['expires_on']) ? Carbon::parse($charge['expires_on'])->format('Y-m-d') : null,
                 'description' => $charge['description'] ?? null,
                 'shop_domain' => $shop_domain,
-                'created_at' => Carbon::parse($charge['created_at'])->format('Y-m-d') ?? null,
-                'updated_at' => Carbon::parse($charge['updated_at'])->format('Y-m-d') ?? null,
+                'created_at' => !empty($charge['created_at']) ? Carbon::parse($charge['created_at'])->format('Y-m-d') : null,
+                'updated_at' => !empty($charge['updated_at']) ? Carbon::parse($charge['updated_at'])->format('Y-m-d') : null,
                 'plan_id' => $storedPlans[$charge['plan_id']] ?? null,
                 'old_charge_id' => $charge['id'],
                 'migration' => true,
             ];
 
             $this->storeChargeHelper($client, $preparedCharge, $charge);
-            sleep(2);
+            sleep(1);
         }
 
         // --------------------------------- Plan Features ---------------------------------
