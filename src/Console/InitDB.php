@@ -23,7 +23,7 @@ class InitDB extends Command
 
         \Storage::put('app-manager/database.sqlite','');
 
-        Artisan::call('migrate', ['--database' => 'app-manager-sqlite', '--path' => "/vendor/hulkapps/appmanager/migrations"]);
+        Artisan::call('migrate --force', ['--database' => 'app-manager-sqlite', '--path' => "/vendor/hulkapps/appmanager/migrations"]);
 
     }
 
