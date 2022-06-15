@@ -89,6 +89,9 @@ class MigratePlans extends Command
         $storedCharges = \AppManager::getCharges();
         foreach ($charges as $index => $charge) {
 
+            if (in_array($charge['type'], ['CHARGE', '2'])) {
+                continue;
+            }
             $this->progressBar($index, count($charges), 'Charges');
             $shop_domain = $shopTableName == 'users' ? ($userData[$charge['user_id']] ?? null) : ($shopTableName == 'shops' ? ($userData[$charge['shop_id']] ?? null) : null);
             $preparedCharge = [
@@ -99,8 +102,8 @@ class MigratePlans extends Command
                 'name' => $charge['name'] ?? null,
                 'type' => $charge['type'],
                 'price' => $charge['price'],
-                'interval' => $charge['interval'] ?? null,
-                'trial_days' => $charge['trial_days'] ?? null,
+                'interval' => $charge['interval'] ?? 'EVERY_30_DAYS',
+                'trial_days' => $charge['trial_days'] ?? 0,
                 'billing_on' => !empty($charge['billing_on']) ? Carbon::parse($charge['billing_on'])->format('Y-m-d') : null,
                 'trial_ends_on' => !empty($charge['trial_ends_on']) ? Carbon::parse($charge['trial_ends_on'])->format('Y-m-d') : null,
                 'activated_on' => !empty($charge['activated_on']) ? Carbon::parse($charge['activated_on'])->format('Y-m-d') : null,
