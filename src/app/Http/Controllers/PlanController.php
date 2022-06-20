@@ -33,12 +33,21 @@ class PlanController extends Controller
             $shopify_plan = $plan = $plans = null;
 
             if ($request->has('shop_domain')) {
-                $plans = \AppManager::getPlans($request->get('shop_domain'));
                 $shopDomain = $request->get('shop_domain');
+                $plans = \AppManager::getPlans($shopDomain);
                 $userData = DB::table($shopTableName)->where($storeFieldName, $shopDomain)->get();
                 $shopify_plan = collect($userData)->pluck($shopifyPlanFieldName)->first();
                 $activePlanId = collect($userData)->pluck($planFieldName)->first();
                 $plan = collect($plans)->where('id', $activePlanId)->first();
+
+                $trialActivatedAt = collect($userData)->pluck(config('app-manager.field_names.trial_activated_at', 'trial_activated_at'))->first();
+                $activeCharge = \AppManager::getCharge($shopDomain);
+                if (!isset($activeCharge['active_charge']) && $trialActivatedAt && $plan) {
+                    $plan['choose_later'] = true;
+                }
+                else {
+                    $plan['choose_later'] = false;
+                }
             }
 
             $defaultPlanId = 0;
