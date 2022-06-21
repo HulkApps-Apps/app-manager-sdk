@@ -26,11 +26,11 @@ class PlanController extends Controller
         $storeFieldName = config('app-manager.field_names.name', 'name');
         $planFieldName = config('app-manager.field_names.plan_id', 'plan_id');
         $shopifyPlanFieldName = config('app-manager.field_names.shopify_plan', 'shopify_plan');
-
         $cacheKey = $request->has('shop_domain') ? 'app-manager.plans-'.$request->get('shop_domain') : 'app-manager.all-plans';
 
         $response = Cache::rememberForever($cacheKey, function () use ($request, $shopTableName, $storeFieldName, $planFieldName, $shopifyPlanFieldName, $cacheKey) {
             $shopify_plan = $plan = $plans = null;
+            $choose_later = false;
 
             if ($request->has('shop_domain')) {
                 $shopDomain = $request->get('shop_domain');
@@ -42,11 +42,8 @@ class PlanController extends Controller
 
                 $trialActivatedAt = collect($userData)->pluck(config('app-manager.field_names.trial_activated_at', 'trial_activated_at'))->first();
                 $activeCharge = \AppManager::getCharge($shopDomain);
-                if (!isset($activeCharge['active_charge']) && $trialActivatedAt && $plan) {
-                    $plan['choose_later'] = true;
-                }
-                else {
-                    $plan['choose_later'] = false;
+                if (empty($activeCharge['active_charge']) && $trialActivatedAt) {
+                    $choose_later = true;
                 }
             }
 
@@ -70,7 +67,8 @@ class PlanController extends Controller
                 'plans' => $plans,
                 'shopify_plan' => $shopify_plan,
                 'plan' => $plan,
-                'default_plan_id' => $defaultPlanId
+                'default_plan_id' => $defaultPlanId,
+                'choose_later' => $choose_later
             ];
         });
 
