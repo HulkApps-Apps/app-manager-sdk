@@ -29,6 +29,19 @@ class ChargeController extends Controller
         if ($shop) {
 
             $plan = \AppManager::getPlan($plan_id, $request->shop);
+            if ($plan['price'] == 0) {
+                $user = DB::table($tableName)->where($storeNameField, $request->shop)->update([$storePlanField => $request->plan]);
+                if ($user) {
+                    try {
+                        event(new PlanActivated($plan, null, null));
+                    } catch (\Exception $exception) {
+                        report($exception);
+                    }
+                    Artisan::call('cache:clear');
+                    return \redirect()->route('home',['shop' => $request->shop]);
+                }
+                else throw new ChargeException("Invalid charge");
+            }
 
             $query = '
         mutation appSubscriptionCreate(
@@ -155,7 +168,11 @@ class ChargeController extends Controller
                 DB::table($tableName)->where($storeName, $request->shop)->update([$storePlanField => $request->plan]);
                 $chargeData = \AppManager::getCharge($shop->$storeName);
 
-                event(new PlanActivated($plan, $charge, $chargeData ? ($chargeData['cancelled_charge'] ?? null) : null));
+                try {
+                    event(new PlanActivated($plan, $charge, $chargeData ? ($chargeData['cancelled_charge'] ?? null) : null));
+                } catch (\Exception $exception) {
+                    report($exception);
+                }
             }
         } else throw new ChargeException("Invalid charge");
 
