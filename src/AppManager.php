@@ -4,7 +4,6 @@ namespace HulkApps\AppManager;
 
 use HulkApps\AppManager\app\Traits\FailsafeHelper;
 use HulkApps\AppManager\Client\Client;
-use HulkApps\AppManager\Exception\ConnectionException;
 use Illuminate\Support\Str;
 
 class AppManager

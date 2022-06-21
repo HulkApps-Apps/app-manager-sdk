@@ -2,7 +2,6 @@
 
 namespace HulkApps\AppManager\app\Http\Controllers;
 
-use Carbon\Carbon;
 use HulkApps\AppManager\app\Events\PlanActivated;
 use HulkApps\AppManager\Client\Client;
 use HulkApps\AppManager\Exception\ChargeException;
@@ -13,7 +12,6 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Redirect;
 
 class ChargeController extends Controller
 {

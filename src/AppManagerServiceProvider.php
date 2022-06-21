@@ -18,12 +18,6 @@ class AppManagerServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        /*
-         * Optional methods to load your package assets
-         */
-        // $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'app-manager');
-        // $this->loadViewsFrom(__DIR__.'/../resources/views', 'app-manager');
-        // $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
         $this->loadRoutesFrom(__DIR__ . '/../routes/app-manager.php');
 
         $router = $this->app->make(Router::class);

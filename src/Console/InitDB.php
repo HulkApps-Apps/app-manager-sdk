@@ -4,7 +4,6 @@ namespace HulkApps\AppManager\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 
 class InitDB extends Command
@@ -16,10 +15,11 @@ class InitDB extends Command
 
     public function handle() {
 
-        $db_path = storage_path('app-manager/database.sqlite');
-        if (!\Storage::exists('app-manager')) {
-            \Storage::makeDirectory('app-manager',775);
+        if (!Storage::exists('app-manager')) {
+            Storage::makeDirectory('app-manager',775);
         }
+
+        Storage::delete('app-manager/database.sqlite');
 
         \Storage::put('app-manager/database.sqlite','');
 

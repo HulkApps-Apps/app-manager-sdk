@@ -4,7 +4,6 @@ namespace HulkApps\AppManager\app\Traits;
 
 use HulkApps\AppManager\Exception\MissingPlanException;
 
-
 trait HasPlan
 {
     public function hasPlan() {
