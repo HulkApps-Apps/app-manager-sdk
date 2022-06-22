@@ -47,20 +47,21 @@ class PlanController extends Controller
                 }
             }
 
-            $defaultPlanId = 0;
-            $defaultPlansData = collect($plans)->where('interval', 'EVERY_30_DAYS')->sortByDesc('price');
-            $storeBasePlan = $defaultPlansData->pluck('store_base_plan')->first();
-            if ($storeBasePlan) {
-                $shopify_plans = $defaultPlansData->pluck('shopify_plans', 'id')->toArray();
-                foreach ($shopify_plans as $index => $s) {
-                    if (in_array($shopify_plan, $s)) {
-                        $defaultPlanId = $index;
-                        break;
+            $defaultPlanId = null;
+            $defaultPlansData = collect($plans)->where('choose_later_plan', true);
+            if ($defaultPlansData) {
+                if ($defaultPlansData->where('store_base_plan', true)->count()) {
+                    $shopify_plans = collect($plans)->where('interval', 'EVERY_30_DAYS');
+                    foreach ($shopify_plans as $index => $s) {
+                        if (in_array($shopify_plan, $s['shopify_plans'])) {
+                            $defaultPlanId = $s['id'];
+                            break;
+                        }
                     }
                 }
-            }
-            else {
-                $defaultPlanId = $defaultPlansData->pluck('id')->first();
+                else {
+                    $defaultPlanId = $defaultPlansData->pluck('id')->first();
+                }
             }
 
             return [

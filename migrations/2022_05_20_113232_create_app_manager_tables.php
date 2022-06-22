@@ -25,6 +25,7 @@ class CreateAppManagerTables extends Migration
 			$table->string('name');
 			$table->double('price', 8, 2);
 			$table->string('offer_text')->nullable();
+			$table->string('description')->nullable();
 			$table->text('interval');
 			$table->text('shopify_plans')->nullable();
 			$table->integer('trial_days')->default(0);
@@ -37,6 +38,7 @@ class CreateAppManagerTables extends Migration
 			$table->smallInteger('cycle_count')->nullable();
 			$table->enum('discount_type', ['amount', 'percentage'])->nullable();
 			$table->boolean('store_base_plan')->nullable();
+			$table->boolean('choose_later_plan')->nullable();
 			$table->text('affiliate')->nullable();
 			$table->text('feature_plan')->nullable();
 			$table->dateTime('deleted_at')->nullable();
@@ -46,7 +48,7 @@ class CreateAppManagerTables extends Migration
         Schema::create('charges', function (Blueprint $table) {
 			$table->id();
 			$table->bigInteger('charge_id');
-			$table->boolean('test');
+			$table->boolean('test')->nullable();
 			$table->string('status')->nullable();
 			$table->string('name')->nullable();
 			$table->string('type');
