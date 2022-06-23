@@ -86,7 +86,7 @@ trait HasPlan
         if (!$plan_id) {
             $shopify_fields = config('app-manager.field_names');
             $plans = \AppManager::getPlans($this->{$shopify_fields['name']});
-            $freePlanId = collect($plans)->where('price', 0)->pluck('id')->first();
+            $freePlanId = collect($plans)->where('price', 0)->where('public', true)->pluck('id')->first();
             if (!$freePlanId) {
                 throw new MissingPlanException('Free Plan is not available');
             }

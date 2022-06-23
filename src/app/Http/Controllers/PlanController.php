@@ -42,7 +42,7 @@ class PlanController extends Controller
 
                 $trialActivatedAt = collect($userData)->pluck(config('app-manager.field_names.trial_activated_at', 'trial_activated_at'))->first();
                 $activeCharge = \AppManager::getCharge($shopDomain);
-                if (empty($activeCharge['active_charge']) && $trialActivatedAt) {
+                if (empty($activeCharge['active_charge']) && empty($activeCharge['cancelled_charge']) && $trialActivatedAt) {
                     $choose_later = true;
                 }
             }
