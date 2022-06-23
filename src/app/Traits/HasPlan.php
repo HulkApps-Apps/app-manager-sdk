@@ -19,7 +19,7 @@ trait HasPlan
             return true;
         }
         $activeCharge = \AppManager::getCharge($this->{$shopify_fields['name']});
-        return $activeCharge ? true : false;
+        return isset($activeCharge['active_charge']);
     }
 
     public function planFeatures() {
@@ -80,5 +80,22 @@ trait HasPlan
         $shopify_fields = config('app-manager.field_names');
         $shop_domain = $this->{$shopify_fields['name']};
         return \AppManager::getCharge($shop_domain);
+    }
+
+    public function setDefaultPlan($plan_id = null) {
+        if (!$plan_id) {
+            $shopify_fields = config('app-manager.field_names');
+            $plans = \AppManager::getPlans($this->{$shopify_fields['name']});
+            $freePlanId = collect($plans)->where('price', 0)->where('public', true)->pluck('id')->first();
+            if (!$freePlanId) {
+                throw new MissingPlanException('Free Plan is not available');
+            }
+            $this->plan_id = $freePlanId;
+            $this->save();
+        }
+        else {
+            $this->plan_id = $plan_id;
+            $this->save();
+        }
     }
 }

@@ -5,6 +5,7 @@ namespace HulkApps\AppManager\app\Traits;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 trait FailsafeHelper {
 
@@ -182,11 +183,14 @@ trait FailsafeHelper {
 
     public function initializeFailsafeDB() {
 
-        if (!\Storage::exists('app-manager')) {
-            \Storage::makeDirectory('app-manager',775);
+        $disk = Storage::disk('local');
+        if (!$disk->exists('app-manager')) {
+            $disk->makeDirectory('app-manager',775);
         }
 
-        \Storage::put('app-manager/database.sqlite','');
+        $disk->delete('app-manager/database.sqlite');
+
+        $disk->put('app-manager/database.sqlite','');
 
         Artisan::call('migrate', ['--force' => true,'--database' => 'app-manager-sqlite', '--path' => "/vendor/hulkapps/appmanager/migrations"]);
     }
