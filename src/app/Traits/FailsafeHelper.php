@@ -159,8 +159,7 @@ trait FailsafeHelper {
 
     public function syncAppManager() {
 
-        DB::connection('app-manager-sqlite')->getPdo();
-        $status = DB::connection('app-manager-sqlite')->getDatabaseName() ? true : false;
+        $status = DB::connection('app-manager-sqlite')->getPdo() && DB::connection('app-manager-sqlite')->getDatabaseName();
 
         if ($status) {
             $response = \AppManager::getStatus();
