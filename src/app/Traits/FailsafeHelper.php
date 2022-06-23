@@ -158,23 +158,27 @@ trait FailsafeHelper {
     }
 
     public function syncAppManager() {
-        $response = \AppManager::getStatus();
 
-        if ($response->getStatusCode() == 200) {
-            $charges = DB::connection('app-manager-sqlite')->table('charges')
-                ->where('sync', 0)->where('process_type', 'store-charge')->get()->toArray();
+        $status = DB::connection('app-manager-sqlite')->getPdo() && DB::connection('app-manager-sqlite')->getDatabaseName();
 
-            if ($charges) {
-                foreach ($charges as $charge) {
-                    $charge = json_decode(json_encode($charge), true);
+        if ($status) {
+            $response = \AppManager::getStatus();
+            if ($response->getStatusCode() == 200) {
+                $charges = DB::connection('app-manager-sqlite')->table('charges')
+                    ->where('sync', 0)->where('process_type', 'store-charge')->get()->toArray();
 
-                    $response = \AppManager::syncCharge($charge);
-                    if ($response) {
-                        DB::connection('app-manager-sqlite')->table('charges')
-                            ->where('charge_id', $charge['charge_id'])->update([
-                                'sync' => 1,
-                                'process_type' => null
-                            ]);
+                if ($charges) {
+                    foreach ($charges as $charge) {
+                        $charge = json_decode(json_encode($charge), true);
+
+                        $response = \AppManager::syncCharge($charge);
+                        if ($response) {
+                            DB::connection('app-manager-sqlite')->table('charges')
+                                ->where('charge_id', $charge['charge_id'])->update([
+                                    'sync' => 1,
+                                    'process_type' => null
+                                ]);
+                        }
                     }
                 }
             }
@@ -184,13 +188,11 @@ trait FailsafeHelper {
     public function initializeFailsafeDB() {
 
         $disk = Storage::disk('local');
-        if (!$disk->exists('app-manager')) {
-            $disk->makeDirectory('app-manager',775);
-        }
+        \File::ensureDirectoryExists('storage/app/app-manager');
 
         $disk->delete('app-manager/database.sqlite');
 
-        $disk->put('app-manager/database.sqlite','');
+        $disk->put('app-manager/database.sqlite','', 'public');
 
         Artisan::call('migrate', ['--force' => true,'--database' => 'app-manager-sqlite', '--path' => "/vendor/hulkapps/appmanager/migrations"]);
     }

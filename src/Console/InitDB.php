@@ -16,13 +16,11 @@ class InitDB extends Command
     public function handle() {
 
         $disk = Storage::disk('local');
-        if (!$disk->exists('app-manager')) {
-            $disk->makeDirectory('app-manager',775);
-        }
+        \File::ensureDirectoryExists('storage/app/app-manager');
 
         $disk->delete('app-manager/database.sqlite');
 
-        $disk->put('app-manager/database.sqlite','');
+        $disk->put('app-manager/database.sqlite','', 'public');
 
         Artisan::call('migrate', ['--force' => true,'--database' => 'app-manager-sqlite', '--path' => "/vendor/hulkapps/appmanager/migrations"]);
 

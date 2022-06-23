@@ -98,4 +98,23 @@ trait HasPlan
             $this->save();
         }
     }
+
+    public function getPlansByFeatures($features) {
+        if (count($features) == 0) {
+            return 'features is required';
+        }
+        sort($features);
+        $return = [];
+        $shopify_fields = config('app-manager.field_names');
+        $plans = \AppManager::getPlans($this->{$shopify_fields['name']});
+        $plans = collect($plans)->where('interval', 'EVERY_30_DAYS')->where('public', true);
+        foreach ($plans as $plan) {
+            $planFeatures = collect($plan['features'])->pluck('slug')->toArray();
+            sort($planFeatures);
+            if (array_values(array_intersect($planFeatures, $features)) == $features) {
+                $return[] = $plan;
+            }
+        }
+        return $return;
+    }
 }
