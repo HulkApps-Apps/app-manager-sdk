@@ -26,11 +26,11 @@ class PlanController extends Controller
         $storeFieldName = config('app-manager.field_names.name', 'name');
         $planFieldName = config('app-manager.field_names.plan_id', 'plan_id');
         $shopifyPlanFieldName = config('app-manager.field_names.shopify_plan', 'shopify_plan');
-
         $cacheKey = $request->has('shop_domain') ? 'app-manager.plans-'.$request->get('shop_domain') : 'app-manager.all-plans';
 
         $response = Cache::rememberForever($cacheKey, function () use ($request, $shopTableName, $storeFieldName, $planFieldName, $shopifyPlanFieldName, $cacheKey) {
             $shopify_plan = $plan = $plans = null;
+            $choose_later = false;
 
             if ($request->has('shop_domain')) {
                 $shopDomain = $request->get('shop_domain');
@@ -42,35 +42,34 @@ class PlanController extends Controller
 
                 $trialActivatedAt = collect($userData)->pluck(config('app-manager.field_names.trial_activated_at', 'trial_activated_at'))->first();
                 $activeCharge = \AppManager::getCharge($shopDomain);
-                if (!isset($activeCharge['active_charge']) && $trialActivatedAt && $plan) {
-                    $plan['choose_later'] = true;
-                }
-                else {
-                    $plan['choose_later'] = false;
+                if (empty($activeCharge['active_charge']) && $trialActivatedAt) {
+                    $choose_later = true;
                 }
             }
 
-            $defaultPlanId = 0;
-            $defaultPlansData = collect($plans)->where('interval', 'EVERY_30_DAYS')->sortByDesc('price');
-            $storeBasePlan = $defaultPlansData->pluck('store_base_plan')->first();
-            if ($storeBasePlan) {
-                $shopify_plans = $defaultPlansData->pluck('shopify_plans', 'id')->toArray();
-                foreach ($shopify_plans as $index => $s) {
-                    if (in_array($shopify_plan, $s)) {
-                        $defaultPlanId = $index;
-                        break;
+            $defaultPlanId = null;
+            $defaultPlansData = collect($plans)->where('choose_later_plan', true);
+            if ($defaultPlansData) {
+                if ($defaultPlansData->where('store_base_plan', true)->count()) {
+                    $shopify_plans = collect($plans)->where('interval', 'EVERY_30_DAYS');
+                    foreach ($shopify_plans as $index => $s) {
+                        if (in_array($shopify_plan, $s['shopify_plans'])) {
+                            $defaultPlanId = $s['id'];
+                            break;
+                        }
                     }
                 }
-            }
-            else {
-                $defaultPlanId = $defaultPlansData->pluck('id')->first();
+                else {
+                    $defaultPlanId = $defaultPlansData->pluck('id')->first();
+                }
             }
 
             return [
                 'plans' => $plans,
                 'shopify_plan' => $shopify_plan,
                 'plan' => $plan,
-                'default_plan_id' => $defaultPlanId
+                'default_plan_id' => $defaultPlanId,
+                'choose_later' => $choose_later
             ];
         });
 
