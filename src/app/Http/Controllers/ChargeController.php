@@ -30,7 +30,8 @@ class ChargeController extends Controller
 
             $plan = \AppManager::getPlan($plan_id, $request->shop);
             if ($plan['price'] == 0) {
-                $user = DB::table($tableName)->where($storeNameField, $request->shop)->update([$storePlanField => $plan_id]);
+                $user = DB::table($tableName)->where($storeNameField, $request->shop)
+                    ->update([$storePlanField => $plan_id, $storeTrialActivatedAtField => null]);
                 if ($user) {
                     try {
                         event(new PlanActivated($plan, null, null));
