@@ -5,7 +5,9 @@ namespace HulkApps\AppManager\app\Traits;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use ZipStream\File;
 
 trait FailsafeHelper {
 
@@ -159,7 +161,13 @@ trait FailsafeHelper {
 
     public function syncAppManager() {
 
-        $status = DB::connection('app-manager-sqlite')->getPdo() && DB::connection('app-manager-sqlite')->getDatabaseName();
+        $status = false;
+        $db_path = Storage::disk('public')->path('app-manager/database.sqlite');
+        if (\File::exists($db_path)) {
+            $status = DB::connection('app-manager-sqlite')->getPdo() &&
+                DB::connection('app-manager-sqlite')->getDatabaseName() &&
+                \Schema::connection('app-manager-sqlite')->hasTable('charges');
+        }
 
         if ($status) {
             $response = \AppManager::getStatus();
@@ -188,9 +196,7 @@ trait FailsafeHelper {
     public function initializeFailsafeDB() {
 
         $disk = Storage::disk('local');
-        \File::ensureDirectoryExists('storage/app/app-manager');
-
-        $disk->delete('app-manager/database.sqlite');
+        \File::ensureDirectoryExists('storage/app/app-manager',775);
 
         $disk->put('app-manager/database.sqlite','', 'public');
 

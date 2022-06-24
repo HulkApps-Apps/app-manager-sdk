@@ -16,9 +16,7 @@ class InitDB extends Command
     public function handle() {
 
         $disk = Storage::disk('local');
-        \File::ensureDirectoryExists('storage/app/app-manager');
-
-        $disk->delete('app-manager/database.sqlite');
+        \File::ensureDirectoryExists('storage/app/app-manager',775);
 
         $disk->put('app-manager/database.sqlite','', 'public');
 
