@@ -200,8 +200,6 @@ trait FailsafeHelper {
 
         $disk->put('app-manager/database.sqlite','', 'public');
 
-        file_put_contents($disk->path('app-manager/database.sqlite'),'');
-
         Artisan::call('migrate', ['--force' => true,'--database' => 'app-manager-sqlite', '--path' => "/vendor/hulkapps/appmanager/migrations"]);
     }
 
