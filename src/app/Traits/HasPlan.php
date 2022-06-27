@@ -101,7 +101,7 @@ trait HasPlan
 
     public function getPlansByFeatures($features) {
         if (count($features) == 0) {
-            return 'features is required';
+            return [];
         }
         sort($features);
         $return = [];
@@ -116,5 +116,47 @@ trait HasPlan
             }
         }
         return $return;
+    }
+
+    public function getPlansByFeaturesWithValues($features) {
+        if (count($features) == 0) {
+            return [];
+        }
+        $return = [];
+        $shopify_fields = config('app-manager.field_names');
+        $plans = \AppManager::getPlans($this->{$shopify_fields['name']});
+        $plans = collect($plans)->where('interval', 'EVERY_30_DAYS')->where('public', true);
+        foreach ($plans as $plan) {
+            $planFeatures = collect($plan['features'])->pluck('value', 'slug')->toArray();
+            $flag = true;
+            foreach ($features as $key => $feature) {
+                $feature = str_replace('"', '', str_replace('"', '', $feature));
+                if (!$feature) {
+                    $flag = $flag && collect($plan['features'])->where('slug', $key)->count() > 0;
+                }
+                else {
+                    $result = collect($plan['features'])->where('slug', $key)->first();
+                    if ($result) {
+                        if ($result['value_type'] == 'array') {
+                            $flag = $flag && str_contains($result['value'], $feature);
+                        }
+                        elseif ($result['value_type'] == 'string') {
+                            $result['value'] = str_replace('"', '', str_replace('"', '', $result['value']));
+                            $flag = $flag && collect([$result])->where('value', $feature)->count() > 0;
+                        }
+                        else {
+                            $flag = $flag && collect($plan['features'])->where('slug', $key)->where('value', $feature)->count() > 0;
+                        }
+                    }
+                    else {
+                        $flag = false;
+                    }
+                }
+            }
+            if ($flag) {
+                $return[] = json_decode(json_encode($plan), true);
+            }
+        }
+        return array_values(collect($return)->keyBy('id')->toArray());
     }
 }
