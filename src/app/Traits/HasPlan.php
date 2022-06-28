@@ -144,6 +144,11 @@ trait HasPlan
                             $result['value'] = str_replace('"', '', str_replace('"', '', $result['value']));
                             $flag = $flag && collect([$result])->where('value', $feature)->count() > 0;
                         }
+                        elseif (in_array($result['value_type'], ['integer', 'double'])) {
+                            if ($result['value'] != -1){
+                                $flag = $flag && collect([$result])->where('value', '>', $feature)->count() > 0;
+                            }
+                        }
                         else {
                             $flag = $flag && collect($plan['features'])->where('slug', $key)->where('value', $feature)->count() > 0;
                         }
