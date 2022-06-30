@@ -28,10 +28,14 @@ class AppManager
         }
     }
 
-    public function getPlans($shop_domain) {
+    public function getPlans($shop_domain, $active_plan_id = null) {
 
         try {
-            $data = $this->client->get('plans', ['shop_domain' => $shop_domain]);
+            $payload = ['shop_domain' => $shop_domain];
+            if ($active_plan_id) {
+                $payload['active_plan_id'] = $active_plan_id;
+            }
+            $data = $this->client->get('plans', $payload);
             return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->preparePlans($shop_domain);
         }
         catch (\Exception $e) {
