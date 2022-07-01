@@ -14,9 +14,22 @@ trait FailsafeHelper {
         return head($marketingBannersData)->marketing_banners ?? null;
     }
 
-    public function preparePlans($shop_domain) {
-        $activePlanId = DB::connection('app-manager-sqlite')->table('charges')
-            ->where('shop_domain', $shop_domain)->pluck('plan_id')->first();
+    public function preparePlans($shop_domain, $active_plan_id = null) {
+
+        $activeChargePrice = $activePlanId = null;
+        $plansData = DB::connection('app-manager-sqlite')->table('plans')
+            ->where('shop_domain', $shop_domain)->get();
+        $activeChargeData = DB::connection('app-manager-sqlite')->table('charges')
+            ->where('shop_domain', $shop_domain)->where('status', 'active')->get()->toArray();
+        if (!empty($activeChargeData)) {
+            $activePlanId = collect($activeChargeData)->pluck('plan_id')->first();
+            $activeChargePrice = collect($activeChargeData)->pluck('price')->first();
+        }
+        elseif ($active_plan_id) {
+            $activePlanId = $active_plan_id;
+            $activeChargePrice = collect($plansData)->where('id', $activePlanId)->pluck('price')->first();
+        }
+
         $customPlanIds = DB::connection('app-manager-sqlite')->table('plan_user')
             ->where('shop_domain', $shop_domain)->pluck('plan_id')->toArray();
         array_push($customPlanIds, $activePlanId ?? null);
@@ -51,16 +64,36 @@ trait FailsafeHelper {
                 foreach ($featuresByPlans as $key => $featuresByPlan) {
                     $featuresByPlans[$key]->name = $features[$featuresByPlan->feature_id]['name'] ?? null;
                     $featuresByPlans[$key]->format = $features[$featuresByPlan->feature_id]['format'] ?? null;
+                    $featuresByPlans[$key]->slug = $features[$featuresByPlan->feature_id]['slug'] ?? null;
+                    $featuresByPlans[$key]->name = $features[$featuresByPlan->feature_id]['name'] ?? null;
                 }
             }
             $featuresByPlans = collect($featuresByPlans)->groupBy('plan_id')->toArray();
         }
 
+        $customDiscounts = DB::connection('app-manager-sqlite')->table('discount_plan')->where('shop_domain', $shop_domain)
+            ->orderByDesc('created_at')->get(['plan_id','discount', 'discount_type', 'cycle_count'])->first();
+        if ($customDiscounts) {
+            $customDiscounts = $customDiscounts->toArray();
+            $customDiscounts = [
+                $customDiscounts['plan_id'] => $customDiscounts
+            ];
+        }
+
         $plans = json_decode(json_encode($plans), true);
         foreach ($plans as $key => $plan) {
+            if ($activePlanId && $plan['id'] == $activePlanId) {
+                $plans[$key]['price'] = $activeChargePrice;
+            }
             $plans[$key]['interval'] = json_decode($plan['interval'], true)['value'];
             $plans[$key]['shopify_plans'] = collect(json_decode($plan['shopify_plans'], true))->pluck('value')->toArray();
             $plans[$key]['features'] = isset($featuresByPlans[$plan['id']]) ? collect($featuresByPlans[$plan['id']])->keyBy('feature_id')->toArray() : null;
+            $index = isset($customDiscounts[$plan['id']]) ? $plan['id'] : (isset($customDiscounts[-1]) ? -1 : null);
+            if ($index) {
+                $plans[$key]['discount'] = $customDiscounts[$index]['discount'];
+                $plans[$key]['discount_type'] = $customDiscounts[$index]['discount_type'];
+                $plans[$key]['cycle_count'] = $customDiscounts[$index]['cycle_count'];
+            }
         }
         return $plans;
     }

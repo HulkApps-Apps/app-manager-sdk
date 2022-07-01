@@ -71,8 +71,10 @@ trait HasPlan
         return \AppManager::getRemainingDays($shop_domain, $trial_activated_at, $plan_id);
     }
 
-    public function getPlanData() {
-        $planId = $this->plan_id;
+    public function getPlanData($planId = null) {
+        if (!$planId) {
+            $planId = $this->plan_id;
+        }
         return \AppManager::getPlan($planId);
     }
 

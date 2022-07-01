@@ -36,7 +36,7 @@ class AppManager
                 $payload['active_plan_id'] = $active_plan_id;
             }
             $data = $this->client->get('plans', $payload);
-            return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->preparePlans($shop_domain);
+            return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->preparePlans($shop_domain, $active_plan_id);
         }
         catch (\Exception $e) {
             report($e);
