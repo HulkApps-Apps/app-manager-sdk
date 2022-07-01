@@ -202,9 +202,11 @@ trait FailsafeHelper {
     }
 
     public function serializeData ($data) {
-        foreach ($data as $index => $datum) {
-            if (gettype($datum) == 'array') {
-                $data[$index] = json_encode($datum);
+        if (gettype($data) == 'array' || gettype($data) == 'object') {
+            foreach ($data as $index => $datum) {
+                if (gettype($datum) == 'array') {
+                    $data[$index] = json_encode($datum);
+                }
             }
         }
         return $data;

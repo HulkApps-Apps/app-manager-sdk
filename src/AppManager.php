@@ -83,6 +83,19 @@ class AppManager
         }
     }
 
+    public function updateCharge($shop_domain, $plan_id) {
+        try {
+            $data = $this->client->post('update-charge', [
+                'shop_domain' => $shop_domain,
+                'plan_id' => $plan_id
+            ]);
+            return $data->json();
+        }
+        catch (\Exception $e) {
+            report($e);
+        }
+    }
+
     public function syncCharge($payload) {
 
         $data = $this->client->post('sync-charge', $payload);
