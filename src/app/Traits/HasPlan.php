@@ -72,10 +72,11 @@ trait HasPlan
     }
 
     public function getPlanData($planId = null) {
+        $shopify_fields = config('app-manager.field_names');
         if (!$planId) {
             $planId = $this->plan_id;
         }
-        return \AppManager::getPlan($planId);
+        return \AppManager::getPlan($planId, $this->{$shopify_fields['name']});
     }
 
     public function getChargeData() {
