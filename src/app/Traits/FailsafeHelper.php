@@ -17,8 +17,7 @@ trait FailsafeHelper {
     public function preparePlans($shop_domain, $active_plan_id = null) {
 
         $activeChargePrice = $activePlanId = null;
-        $plansData = DB::connection('app-manager-sqlite')->table('plans')
-            ->where('shop_domain', $shop_domain)->get();
+        $plansData = DB::connection('app-manager-sqlite')->table('plans')->get();
         $activeChargeData = DB::connection('app-manager-sqlite')->table('charges')
             ->where('shop_domain', $shop_domain)->where('status', 'active')->get()->toArray();
         if (!empty($activeChargeData)) {
@@ -99,14 +98,13 @@ trait FailsafeHelper {
     }
 
     public function preparePlan($data) {
-        $planId = [$data['plan_id']];
-        $shopDomain = [$data['shop_domain']];
+        $planId = $data['plan_id'];
+        $shopDomain = $data['shop_domain'] ?? null;
 
-        $planData = DB::connection('app-manager-sqlite')->table('plans')
-            ->where('id', $planId)->first();
+        $planData = DB::connection('app-manager-sqlite')->table('plans')->where('id', $planId)->first();
+        $planData = json_decode(json_encode($planData), true);
 
         if ($planData && $shopDomain) {
-            $planData = json_decode(json_encode($planData), true);
             $customDiscounts = DB::connection('app-manager-sqlite')->table('discount_plan')
                 ->where('shop_domain', $shopDomain)->select(['plan_id', 'discount', 'discount_type', 'cycle_count'])->first();
             $customDiscounts = json_decode(json_encode($customDiscounts), true);
@@ -116,6 +114,9 @@ trait FailsafeHelper {
                 $planData['cycle_count'] = isset($customDiscounts['cycle_count']) ? $customDiscounts['cycle_count'] : $planData['cycle_count'];
             }
         }
+
+        $planData['features'] = $planData['feature_plan'];
+        unset($planData['feature_plan']);
 
         return $this->unSerializeData($planData);
     }
@@ -247,7 +248,7 @@ trait FailsafeHelper {
 
     public function unSerializeData ($data) {
         foreach ($data as $index => $datum) {
-            if (in_array($index, ['interval', 'shopify_plans', 'affiliate', 'feature_plan'])) {
+            if (in_array($index, ['interval', 'shopify_plans', 'affiliate', 'features'])) {
                 $data[$index] = json_decode($datum, true);
             }
         }
