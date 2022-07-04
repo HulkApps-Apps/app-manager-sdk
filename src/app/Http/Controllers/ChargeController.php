@@ -170,7 +170,7 @@ class ChargeController extends Controller
                 $chargeData = \AppManager::getCharge($shop->$storeName);
 
                 try {
-                    event(new PlanActivated($plan, $charge, $chargeData ? ($chargeData['cancelled_charge'] ?? null) : null));
+                    event(new PlanActivated($plan, $charge, $chargeData['cancelled_charge'] ?? null));
                 } catch (\Exception $exception) {
                     report($exception);
                 }
