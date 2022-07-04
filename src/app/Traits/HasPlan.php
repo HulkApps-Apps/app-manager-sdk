@@ -19,14 +19,15 @@ trait HasPlan
             return true;
         }
         $activeCharge = \AppManager::getCharge($this->{$shopify_fields['name']});
-        return isset($activeCharge['active_charge']);
+        return count($activeCharge['active_charge']) > 0;
     }
 
     public function planFeatures() {
         $planId = $this->plan_id;
 
         if (!$planId) {
-            throw new MissingPlanException("Plan not found");
+//            throw new MissingPlanException("Plan not found");
+            return [];
         }
 
         $planData = \AppManager::getPlan($planId);
@@ -71,9 +72,12 @@ trait HasPlan
         return \AppManager::getRemainingDays($shop_domain, $trial_activated_at, $plan_id);
     }
 
-    public function getPlanData() {
-        $planId = $this->plan_id;
-        return \AppManager::getPlan($planId);
+    public function getPlanData($planId = null) {
+        $shopify_fields = config('app-manager.field_names');
+        if (!$planId) {
+            $planId = $this->plan_id;
+        }
+        return \AppManager::getPlan($planId, $this->{$shopify_fields['name']});
     }
 
     public function getChargeData() {

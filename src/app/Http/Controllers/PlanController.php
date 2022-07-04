@@ -34,10 +34,10 @@ class PlanController extends Controller
 
             if ($request->has('shop_domain')) {
                 $shopDomain = $request->get('shop_domain');
-                $plans = \AppManager::getPlans($shopDomain);
                 $userData = DB::table($shopTableName)->where($storeFieldName, $shopDomain)->get();
                 $shopify_plan = collect($userData)->pluck($shopifyPlanFieldName)->first();
-                $activePlanId = collect($userData)->pluck($planFieldName)->first();
+                $activePlanId = collect($userData)->pluck($planFieldName)->first() ?? null;
+                $plans = \AppManager::getPlans($shopDomain, $activePlanId);
                 $plan = collect($plans)->where('id', $activePlanId)->first();
 
                 $trialActivatedAt = collect($userData)->pluck(config('app-manager.field_names.trial_activated_at', 'trial_activated_at'))->first();

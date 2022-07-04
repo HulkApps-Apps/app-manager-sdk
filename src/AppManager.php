@@ -28,11 +28,15 @@ class AppManager
         }
     }
 
-    public function getPlans($shop_domain) {
+    public function getPlans($shop_domain, $active_plan_id = null) {
 
         try {
-            $data = $this->client->get('plans', ['shop_domain' => $shop_domain]);
-            return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->preparePlans($shop_domain);
+            $payload = ['shop_domain' => $shop_domain];
+            if ($active_plan_id) {
+                $payload['active_plan_id'] = $active_plan_id;
+            }
+            $data = $this->client->get('plans', $payload);
+            return Str::startsWith($data->getStatusCode(), '2') || Str::startsWith($data->getStatusCode(), '4') ? $data->json() : $this->preparePlans($shop_domain, $active_plan_id);
         }
         catch (\Exception $e) {
             report($e);
@@ -76,6 +80,19 @@ class AppManager
         catch (\Exception $e) {
             report($e);
             return $this->cancelChargeHelper($shop_domain, $plan_id);
+        }
+    }
+
+    public function updateCharge($shop_domain, $plan_id) {
+        try {
+            $data = $this->client->post('update-charge', [
+                'shop_domain' => $shop_domain,
+                'plan_id' => $plan_id
+            ]);
+            return $data->json();
+        }
+        catch (\Exception $e) {
+            report($e);
         }
     }
 
