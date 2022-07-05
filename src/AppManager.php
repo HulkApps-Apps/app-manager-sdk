@@ -13,7 +13,7 @@ class AppManager
 
     public function __construct($api_endpoint, $api_key) {
 
-        $this->client = Client::withHeaders(['token' => $api_key, 'Accept' => 'application/json'])->withoutVerifying()->timeout(5)->baseUri($api_endpoint);
+        $this->client = Client::withHeaders(['token' => $api_key, 'Accept' => 'application/json'])->withoutVerifying()->timeout(10)->baseUri($api_endpoint);
     }
 
     public function getBanners() {
