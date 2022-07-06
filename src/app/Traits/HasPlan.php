@@ -19,7 +19,7 @@ trait HasPlan
             return true;
         }
         $activeCharge = \AppManager::getCharge($this->{$shopify_fields['name']});
-        return count($activeCharge['active_charge']) > 0;
+        return count($activeCharge['active_charge']??[]) > 0;
     }
 
     public function planFeatures() {
