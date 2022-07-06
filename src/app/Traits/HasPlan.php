@@ -26,25 +26,28 @@ trait HasPlan
     }
 
     public function planFeatures() {
-        $planId = $this->plan_id;
+        $shopify_fields = config('app-manager.field_names');
+        return Cache::rememberForever('app-manager.plan_feature_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at, function () use ($shopify_fields) {
+            $planId = $this->plan_id;
 
-        if (!$planId) {
+            if (!$planId) {
 //            throw new MissingPlanException("Plan not found");
-            return [];
-        }
+                return [];
+            }
 
-        $planData = \AppManager::getPlan($planId);
+            $planData = \AppManager::getPlan($planId);
 
-        if (empty($planData['features'] ?? [])) {
-            return [];
-        }
+            if (empty($planData['features'] ?? [])) {
+                return [];
+            }
 
-        $featuresByPlan = collect($planData['features'])->pluck('value', 'feature_id')->toArray();
-        $planFeatures = collect(config('plan_features'))->whereIn('uuid', array_keys($featuresByPlan))->keyBy('uuid')->toArray();
-        foreach ($planFeatures as $index => $planFeature) {
-            $planFeatures[$index]['value'] = $featuresByPlan[$index] ?? null;
-        }
-        return array_values($planFeatures);
+            $featuresByPlan = collect($planData['features'])->pluck('value', 'feature_id')->toArray();
+            $planFeatures = collect(config('plan_features'))->whereIn('uuid', array_keys($featuresByPlan))->keyBy('uuid')->toArray();
+            foreach ($planFeatures as $index => $planFeature) {
+                $planFeatures[$index]['value'] = $featuresByPlan[$index] ?? null;
+            }
+            return array_values($planFeatures);
+        });
     }
 
     public function hasFeature($slug) {
@@ -67,26 +70,34 @@ trait HasPlan
 
     public function getRemainingDays() {
         $shopify_fields = config('app-manager.field_names');
-        $shop_domain = $this->{$shopify_fields['name']};
+        return Cache::rememberForever('app-manager.remaining_days_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at, function () use ($shopify_fields) {
 
-        $trial_activated_at = $this->{$shopify_fields['trial_activated_at']};
-        $plan_id = $this->{$shopify_fields['plan_id']};
+            $shop_domain = $this->{$shopify_fields['name']};
 
-        return \AppManager::getRemainingDays($shop_domain, $trial_activated_at, $plan_id);
+            $trial_activated_at = $this->{$shopify_fields['trial_activated_at']};
+            $plan_id = $this->{$shopify_fields['plan_id']};
+            return \AppManager::getRemainingDays($shop_domain, $trial_activated_at, $plan_id);
+        });
     }
 
     public function getPlanData($planId = null) {
         $shopify_fields = config('app-manager.field_names');
-        if (!$planId) {
-            $planId = $this->plan_id;
-        }
-        return \AppManager::getPlan($planId, $this->{$shopify_fields['name']});
+
+        return Cache::rememberForever('app-manager.plan_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at, function () use ($shopify_fields, $planId) {
+
+            if (!$planId) {
+                $planId = $this->plan_id;
+            }
+            return \AppManager::getPlan($planId, $this->{$shopify_fields['name']});
+        });
     }
 
     public function getChargeData() {
         $shopify_fields = config('app-manager.field_names');
         $shop_domain = $this->{$shopify_fields['name']};
-        return \AppManager::getCharge($shop_domain);
+        return Cache::rememberForever('app-manager.charges_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at, function () use ($shop_domain) {
+            return \AppManager::getCharge($shop_domain);
+        });
     }
 
     public function setDefaultPlan($plan_id = null) {
