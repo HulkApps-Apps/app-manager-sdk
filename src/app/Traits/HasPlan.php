@@ -9,7 +9,7 @@ trait HasPlan
 {
     public function hasPlan() {
         $shopify_fields = config('app-manager.field_names');
-        return Cache::rememberForever('app-manager.has_plan_response_'.$this->{$shopify_fields['name']}, function () use ($shopify_fields) {
+        return Cache::rememberForever('app-manager.has_plan_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at, function () use ($shopify_fields) {
             if ($this->{$shopify_fields['grandfathered']}) {
                 return true;
             }
