@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Cache;
 
 trait HasPlan
 {
-    public function hasPlan() {
+    public function hasPlanOld() {
         $shopify_fields = config('app-manager.field_names');
         return Cache::rememberForever('app-manager.has_plan_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at, function () use ($shopify_fields) {
             if ($this->{$shopify_fields['grandfathered']}) {
@@ -25,13 +25,28 @@ trait HasPlan
         });
     }
 
+    public function hasPlan() {
+        if (!$this->plan_id) {
+            return false;
+        }
+        $shopify_fields = config('app-manager.field_names');
+        return Cache::rememberForever('app-manager.has_plan_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at, function () use ($shopify_fields) {
+            $response = \AppManager::hasPlan([
+                'grandfathered' => $this->{$shopify_fields['grandfathered']},
+                'shop_domain' => $this->{$shopify_fields['name']},
+                'plan_id' => $this->plan_id,
+                'trial_activated_at' => $this->{$shopify_fields['trial_activated_at']},
+            ]);
+            return $response['has_plan'] ?? false;
+        });
+    }
+
     public function planFeatures() {
         $shopify_fields = config('app-manager.field_names');
         return Cache::rememberForever('app-manager.plan_feature_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at, function () use ($shopify_fields) {
             $planId = $this->plan_id;
 
             if (!$planId) {
-//            throw new MissingPlanException("Plan not found");
                 return [];
             }
 
