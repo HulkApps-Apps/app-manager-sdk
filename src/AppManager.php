@@ -141,6 +141,16 @@ class AppManager
         }
     }
 
+    public function hasPlan($shopDetails) {
+        try {
+            $data = $this->client->get('has-plan',$shopDetails);
+            return $data->json();
+        }
+        catch (\Exception $e) {
+            report($e);
+        }
+    }
+
     // for migration only
     public function getCharges() {
         return $this->client->get('get-charges')->json();
