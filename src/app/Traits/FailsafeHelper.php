@@ -200,6 +200,10 @@ trait FailsafeHelper {
                 DB::connection('app-manager-sqlite')->getDatabaseName() &&
                 \Schema::connection('app-manager-sqlite')->hasTable('charges');
         }
+        else {
+            $this->initializeFailsafeDB();
+            $status = true;
+        }
 
         if ($status) {
             $response = \AppManager::getStatus();
