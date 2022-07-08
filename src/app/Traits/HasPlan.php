@@ -91,7 +91,7 @@ trait HasPlan
 
             $trial_activated_at = $this->{$shopify_fields['trial_activated_at']};
             $plan_id = $this->{$shopify_fields['plan_id']};
-            return \AppManager::getRemainingDays($shop_domain, $trial_activated_at, $plan_id);
+            return \AppManager::getRemainingDays($shop_domain, $trial_activated_at, $plan_id) ?? 0;
         });
     }
 
