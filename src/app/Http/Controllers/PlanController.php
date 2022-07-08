@@ -29,7 +29,7 @@ class PlanController extends Controller
         $cacheKey = $request->has('shop_domain') ? 'app-manager.plans-'.$request->get('shop_domain') : 'app-manager.all-plans';
 
         $response = Cache::rememberForever($cacheKey, function () use ($request, $shopTableName, $storeFieldName, $planFieldName, $shopifyPlanFieldName, $cacheKey) {
-            $shopify_plan = $plan = $plans = null;
+            $shopify_plan = $plan = $plans = $trialActivatedAt = null;
             $choose_later = false;
 
             if ($request->has('shop_domain')) {
@@ -40,7 +40,7 @@ class PlanController extends Controller
                 $plans = \AppManager::getPlans($shopDomain, $activePlanId);
                 $plan = collect($plans)->where('id', $activePlanId)->first();
 
-                $trialActivatedAt = collect($userData)->pluck(config('app-manager.field_names.trial_activated_at', 'trial_activated_at'))->first();
+                $trialActivatedAt = collect($userData)->pluck(config('app-manager.field_names.trial_activated_at', 'trial_activated_at'))->first() ?? null;
                 $activeCharge = \AppManager::getCharge($shopDomain);
                 if (empty($activeCharge['cancelled_charge']) && empty($activeCharge['active_charge']) && !$trialActivatedAt) {
                     $choose_later = true;
@@ -70,7 +70,7 @@ class PlanController extends Controller
                 'plan' => $plan,
                 'default_plan_id' => $defaultPlanId,
                 'choose_later' => $choose_later,
-                'has_active_charge' => !empty($activeCharge['active_charge'])
+                'has_active_charge' => !empty($activeCharge['active_charge']) || !$trialActivatedAt
             ];
         });
 

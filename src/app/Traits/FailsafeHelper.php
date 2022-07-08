@@ -211,6 +211,10 @@ trait FailsafeHelper {
                 DB::connection('app-manager-sqlite')->getDatabaseName() &&
                 \Schema::connection('app-manager-sqlite')->hasTable('charges');
         }
+        else {
+            $this->initializeFailsafeDB();
+            $status = true;
+        }
 
         if ($status) {
             $response = \AppManager::getStatus();
@@ -239,7 +243,7 @@ trait FailsafeHelper {
     public function initializeFailsafeDB() {
 
         $disk = Storage::disk('local');
-        \File::ensureDirectoryExists('storage/app/app-manager',775);
+        \File::ensureDirectoryExists(storage_path('app/app-manager'),775);
 
         $disk->put('app-manager/database.sqlite','', 'public');
 
