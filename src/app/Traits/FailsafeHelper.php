@@ -127,42 +127,53 @@ trait FailsafeHelper {
         $shopDomain = $data['shop_domain'];
         $remainingDays = 0;
 
-        if (isset($trialActivatedAt) && !empty($trialActivatedAt) && isset($planId)) {
+        if (!empty($trialActivatedAt) && !empty($planId)) {
+
             $trialDays = DB::connection('app-manager-sqlite')->table('plans')
                 ->where('id', $planId)->pluck('trial_days')->first();
+
             $trialStartDate = Carbon::parse($trialActivatedAt);
             $trialEndsDate = $trialStartDate->addDays($trialDays);
+
             if ($trialEndsDate->gte(now())) {
                 $remainingDays = now()->diffInDays($trialEndsDate);
             }
+
             $trialExtendData = DB::connection('app-manager-sqlite')->table('trial_extension')
                 ->where('shop_domain', $shopDomain)->where('plan_id', $planId)->orderByDesc('created_at')->first();
+
             if ($trialExtendData) {
                 $extendTrialStartDate = Carbon::parse($trialExtendData->created_at)->addDays($trialExtendData->days);
                 $remainingExtendedDays = now()->lte($extendTrialStartDate) ? now()->diffInDays($extendTrialStartDate) : 0;
                 $remainingDays = $remainingDays + $remainingExtendedDays;
             }
+
             return $remainingDays;
         }
 
         $charge = DB::connection('app-manager-sqlite')->table('charges')
             ->where('shop_domain', $shopDomain)->orderByDesc('created_at')->first();
+
         if ($charge && $charge->trial_days) {
             $trialEndsDate = Carbon::parse($charge->trial_ends_on);
             if (now()->lte($trialEndsDate)) {
                 $remainingDays = now()->diffInDays($trialEndsDate);
             }
 
-            $trialExtendData = DB::connection('app-manager-sqlite')->table('trial_extension')
+            //TODO: Uncomment this code when we implement Shopify trial extension apis
+
+            /*$trialExtendData = DB::connection('app-manager-sqlite')->table('trial_extension')
                 ->where('shop_domain', $shopDomain)->where('plan_id', $charge->plan_id)->orderBy('created_at')->first();
             if ($trialExtendData) {
                 $extendTrialStartDate = Carbon::parse($trialExtendData->created_at)->addDays($trialExtendData->days);
                 $remainingExtendedDays = now()->lte($extendTrialStartDate) ? now()->diffInDays($extendTrialStartDate) : 0;
                 $remainingDays = $remainingDays + $remainingExtendedDays;
-            }
+            }*/
+
             return $remainingDays;
         }
-        return 0;
+
+        return null;
     }
 
     public function getChargeHelper($shop_domain) {
