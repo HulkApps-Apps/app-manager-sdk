@@ -265,4 +265,32 @@ trait FailsafeHelper {
         }
         return $data;
     }
+
+    public function hasPlanHelper($data){
+        if (boolval($data['grandfathered'])) {
+            return ['has_plan' => true];
+        }
+        $planPrice = DB::connection('app-manager-sqlite')->table('plans')
+            ->where('id',$data['plan_id'])->pluck('price')->first();
+        if ($planPrice && $planPrice == 0) {
+            return ['has_plan' => true];
+        }
+
+        $remainingDays = $this->getRemainingDays([
+            'trial_activated_at' => $data['trial_activated_at'],
+            'plan_id' => $data['plan_id'],
+            'shop_domain' => $data['shop_domain']
+        ]);
+        if ($remainingDays && $remainingDays > 0) {
+            return ['has_plan' => true];
+        }
+
+        $activeCharge = DB::connection('app-manager-sqlite')->table('charges')
+            ->where('shop_domain',$data['shop_domain'])->where('status','active')->get()->toArray();
+        if (!empty($activeCharge)) {
+            return ['has_plan' => true];
+        }
+
+        return ['has_plan' => false];
+    }
 }
