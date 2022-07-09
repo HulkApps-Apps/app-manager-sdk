@@ -21,7 +21,7 @@ trait HasPlan
                 return true;
             }
             $activeCharge = \AppManager::getCharge($this->{$shopify_fields['name']});
-            return count($activeCharge['active_charge']) > 0;
+            return $activeCharge['active_charge'] && count($activeCharge['active_charge']) > 0;
         });
     }
 
@@ -91,7 +91,7 @@ trait HasPlan
 
             $trial_activated_at = $this->{$shopify_fields['trial_activated_at']};
             $plan_id = $this->{$shopify_fields['plan_id']};
-            return \AppManager::getRemainingDays($shop_domain, $trial_activated_at, $plan_id);
+            return \AppManager::getRemainingDays($shop_domain, $trial_activated_at, $plan_id) ?? 0;
         });
     }
 

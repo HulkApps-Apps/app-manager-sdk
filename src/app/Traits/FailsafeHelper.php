@@ -125,44 +125,51 @@ trait FailsafeHelper {
         $trialActivatedAt = $data['trial_activated_at'];
         $planId = $data['plan_id'];
         $shopDomain = $data['shop_domain'];
-        $remainingDays = 0;
+        $remainingDays = null;
 
-        if (isset($trialActivatedAt) && !empty($trialActivatedAt) && isset($planId)) {
+        if (!empty($trialActivatedAt) && !empty($planId)) {
+
             $trialDays = DB::connection('app-manager-sqlite')->table('plans')
-                ->where('id', $planId)->pluck('trial_days')->first();
+                ->where('id', $planId)->pluck('trial_days')->first() ?? 0;
+
             $trialStartDate = Carbon::parse($trialActivatedAt);
             $trialEndsDate = $trialStartDate->addDays($trialDays);
+
             if ($trialEndsDate->gte(now())) {
                 $remainingDays = now()->diffInDays($trialEndsDate);
             }
+
             $trialExtendData = DB::connection('app-manager-sqlite')->table('trial_extension')
                 ->where('shop_domain', $shopDomain)->where('plan_id', $planId)->orderByDesc('created_at')->first();
+
             if ($trialExtendData) {
                 $extendTrialStartDate = Carbon::parse($trialExtendData->created_at)->addDays($trialExtendData->days);
                 $remainingExtendedDays = now()->lte($extendTrialStartDate) ? now()->diffInDays($extendTrialStartDate) : 0;
                 $remainingDays = $remainingDays + $remainingExtendedDays;
             }
-            return $remainingDays;
         }
 
         $charge = DB::connection('app-manager-sqlite')->table('charges')
             ->where('shop_domain', $shopDomain)->orderByDesc('created_at')->first();
+
         if ($charge && $charge->trial_days) {
             $trialEndsDate = Carbon::parse($charge->trial_ends_on);
             if (now()->lte($trialEndsDate)) {
                 $remainingDays = now()->diffInDays($trialEndsDate);
             }
 
-            $trialExtendData = DB::connection('app-manager-sqlite')->table('trial_extension')
+            //TODO: Uncomment this code when we implement Shopify trial extension apis
+
+            /*$trialExtendData = DB::connection('app-manager-sqlite')->table('trial_extension')
                 ->where('shop_domain', $shopDomain)->where('plan_id', $charge->plan_id)->orderBy('created_at')->first();
             if ($trialExtendData) {
                 $extendTrialStartDate = Carbon::parse($trialExtendData->created_at)->addDays($trialExtendData->days);
                 $remainingExtendedDays = now()->lte($extendTrialStartDate) ? now()->diffInDays($extendTrialStartDate) : 0;
                 $remainingDays = $remainingDays + $remainingExtendedDays;
-            }
-            return $remainingDays;
+            }*/
         }
-        return 0;
+
+        return $remainingDays;
     }
 
     public function getChargeHelper($shop_domain) {
@@ -232,7 +239,7 @@ trait FailsafeHelper {
     public function initializeFailsafeDB() {
 
         $disk = Storage::disk('local');
-        \File::ensureDirectoryExists('storage/app/app-manager',775);
+        \File::ensureDirectoryExists(storage_path('app/app-manager'),775);
 
         $disk->put('app-manager/database.sqlite','', 'public');
 
@@ -257,5 +264,33 @@ trait FailsafeHelper {
             }
         }
         return $data;
+    }
+
+    public function hasPlanHelper($data){
+        if (boolval($data['grandfathered'])) {
+            return ['has_plan' => true];
+        }
+        $planPrice = DB::connection('app-manager-sqlite')->table('plans')
+            ->where('id',$data['plan_id'])->pluck('price')->first();
+        if ($planPrice && $planPrice == 0) {
+            return ['has_plan' => true];
+        }
+
+        $remainingDays = $this->getRemainingDays([
+            'trial_activated_at' => $data['trial_activated_at'],
+            'plan_id' => $data['plan_id'],
+            'shop_domain' => $data['shop_domain']
+        ]);
+        if ($remainingDays && $remainingDays > 0) {
+            return ['has_plan' => true];
+        }
+
+        $activeCharge = DB::connection('app-manager-sqlite')->table('charges')
+            ->where('shop_domain',$data['shop_domain'])->where('status','active')->get()->toArray();
+        if (!empty($activeCharge)) {
+            return ['has_plan' => true];
+        }
+
+        return ['has_plan' => false];
     }
 }
