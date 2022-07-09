@@ -125,12 +125,12 @@ trait FailsafeHelper {
         $trialActivatedAt = $data['trial_activated_at'];
         $planId = $data['plan_id'];
         $shopDomain = $data['shop_domain'];
-        $remainingDays = 0;
+        $remainingDays = null;
 
         if (!empty($trialActivatedAt) && !empty($planId)) {
 
             $trialDays = DB::connection('app-manager-sqlite')->table('plans')
-                ->where('id', $planId)->pluck('trial_days')->first();
+                ->where('id', $planId)->pluck('trial_days')->first() ?? 0;
 
             $trialStartDate = Carbon::parse($trialActivatedAt);
             $trialEndsDate = $trialStartDate->addDays($trialDays);
@@ -147,8 +147,6 @@ trait FailsafeHelper {
                 $remainingExtendedDays = now()->lte($extendTrialStartDate) ? now()->diffInDays($extendTrialStartDate) : 0;
                 $remainingDays = $remainingDays + $remainingExtendedDays;
             }
-
-            return $remainingDays;
         }
 
         $charge = DB::connection('app-manager-sqlite')->table('charges')
@@ -169,11 +167,9 @@ trait FailsafeHelper {
                 $remainingExtendedDays = now()->lte($extendTrialStartDate) ? now()->diffInDays($extendTrialStartDate) : 0;
                 $remainingDays = $remainingDays + $remainingExtendedDays;
             }*/
-
-            return $remainingDays;
         }
 
-        return null;
+        return $remainingDays;
     }
 
     public function getChargeHelper($shop_domain) {

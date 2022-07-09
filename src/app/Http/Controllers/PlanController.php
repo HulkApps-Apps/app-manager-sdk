@@ -70,7 +70,7 @@ class PlanController extends Controller
                 'plan' => $plan,
                 'default_plan_id' => $defaultPlanId,
                 'choose_later' => $choose_later,
-                'has_active_charge' => !empty($activeCharge['active_charge']) || !$trialActivatedAt
+                'has_active_charge' => (isset($activeCharge['active_charge']) && !empty($activeCharge['active_charge'])) || !$trialActivatedAt
             ];
         });
 
