@@ -200,24 +200,13 @@ trait FailsafeHelper {
 
     public function syncAppManager()
     {
-        $isDBFile = false;
-        $db = DB::connection('app-manager-failsafe');
-        $driver = $db->getConfig('driver');
-        if ($driver == 'sqlite'){
-            $db_path = Storage::disk('public')->path('app-manager/database.sqlite');
-            if (\File::exists($db_path)) {
-                $isDBFile = true;
-            }
-        } else{
-            $isDBFile = true;
-        }
         $status = false;
-        if($isDBFile){
+        try {
             $status = DB::connection('app-manager-failsafe')->getPdo() &&
                 DB::connection('app-manager-failsafe')->getDatabaseName() &&
                 \Schema::connection('app-manager-failsafe')->hasTable('charges');
         }
-        else {
+        catch (\Exception $extends){
             $this->initializeFailsafeDB();
             $status = true;
         }
@@ -248,23 +237,9 @@ trait FailsafeHelper {
 
     public function initializeFailsafeDB() {
         $db = DB::connection('app-manager-failsafe');
-        $driver = $db->getConfig('driver');
         $database = $db->getConfig('database');
-        if($driver == 'sqlite'){
-            $disk = Storage::disk('local');
-            \File::ensureDirectoryExists(storage_path('app/app-manager'));
-            $disk->put('app-manager/database.sqlite','', 'public');
-            $database = 'app-manager-sqlite';
-        }else{
-            $this->dropTables($database);
-        }
-        Artisan::call('migrate', ['--force' => true,'--database' => $database, '--path' => "/vendor/hulkapps/appmanager/migrations"]);
-    }
-
-    function dropTables($database)
-    {
         if(!empty($database)){
-            Artisan::call('migrate:fresh', ['--force' => true,'--database' => $database]);
+            Artisan::call('migrate', ['--force' => true,'--database' => 'app-manager-failsafe', '--path' => "/vendor/hulkapps/appmanager/migrations"]);
         }
     }
 

@@ -16,21 +16,9 @@ class InitDB extends Command
 
     public function handle() {
         $db = DB::connection('app-manager-failsafe');
-        $driver = $db->getConfig('driver');
         $database = $db->getConfig('database');
-        if($driver == 'sqlite'){
-            $disk = Storage::disk('local');
-            \File::ensureDirectoryExists(storage_path('app/app-manager'));
-            $disk->put('app-manager/database.sqlite','', 'public');
-            $database = 'app-manager-sqlite';
-        }else{
-            if(!empty($database)){
-                Artisan::call('migrate:fresh', ['--force' => true,'--database' => $database]);
-            }
-        }
-
         if(!empty($database)){
-            Artisan::call('migrate', ['--force' => true,'--database' => $database, '--path' => "/vendor/hulkapps/appmanager/migrations"]);
+            Artisan::call('migrate', ['--force' => true,'--database' => 'app-manager-failsafe', '--path' => "/vendor/hulkapps/appmanager/migrations"]);
         }
     }
 
