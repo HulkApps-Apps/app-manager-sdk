@@ -10,15 +10,15 @@ use Illuminate\Support\Facades\Storage;
 trait FailsafeHelper {
 
     public function prepareMarketingBanners() {
-        $marketingBannersData = DB::connection('app-manager-sqlite')->table('marketing_banners')->get()->toArray();
+        $marketingBannersData = DB::connection('app-manager-failsafe')->table('marketing_banners')->get()->toArray();
         return head($marketingBannersData)->marketing_banners ?? null;
     }
 
     public function preparePlans($shop_domain, $active_plan_id = null) {
 
         $activeChargePrice = $activePlanId = null;
-        $plansData = DB::connection('app-manager-sqlite')->table('plans')->get();
-        $activeChargeData = DB::connection('app-manager-sqlite')->table('charges')
+        $plansData = DB::connection('app-manager-failsafe')->table('plans')->get();
+        $activeChargeData = DB::connection('app-manager-failsafe')->table('charges')
             ->where('shop_domain', $shop_domain)->where('status', 'active')->get()->toArray();
         if (!empty($activeChargeData)) {
             $activePlanId = collect($activeChargeData)->pluck('plan_id')->first();
@@ -29,17 +29,17 @@ trait FailsafeHelper {
             $activeChargePrice = collect($plansData)->where('id', $activePlanId)->pluck('price')->first();
         }
 
-        $customPlanIds = DB::connection('app-manager-sqlite')->table('plan_user')
+        $customPlanIds = DB::connection('app-manager-failsafe')->table('plan_user')
             ->where('shop_domain', $shop_domain)->pluck('plan_id')->toArray();
         array_push($customPlanIds, $activePlanId ?? null);
-        $customPlanBaseIds = DB::connection('app-manager-sqlite')->table('plans')
+        $customPlanBaseIds = DB::connection('app-manager-failsafe')->table('plans')
             ->whereIn('id', $customPlanIds)->whereNotNull('base_plan')->pluck('base_plan')->toArray();
 
         if ($activePlanId && ($key = array_search($activePlanId, $customPlanBaseIds)) !== false) {
             unset($customPlanBaseIds[$key]);
         }
 
-        $plans = DB::connection('app-manager-sqlite')->table('plans')->where(function ($query) use ($customPlanIds) {
+        $plans = DB::connection('app-manager-failsafe')->table('plans')->where(function ($query) use ($customPlanIds) {
             $query->where('public', 1)
                 ->orWhereIn('id', $customPlanIds);
         })->when(!empty($customPlanBaseIds), function ($query) use ($customPlanBaseIds) {
@@ -70,7 +70,7 @@ trait FailsafeHelper {
             $featuresByPlans = collect($featuresByPlans)->groupBy('plan_id')->toArray();
         }
 
-        $customDiscounts = DB::connection('app-manager-sqlite')->table('discount_plan')->where('shop_domain', $shop_domain)
+        $customDiscounts = DB::connection('app-manager-failsafe')->table('discount_plan')->where('shop_domain', $shop_domain)
             ->orderByDesc('created_at')->get(['plan_id','discount', 'discount_type', 'cycle_count'])->first();
         if ($customDiscounts) {
             $customDiscounts = $customDiscounts->toArray();
@@ -101,11 +101,11 @@ trait FailsafeHelper {
         $planId = $data['plan_id'];
         $shopDomain = $data['shop_domain'] ?? null;
 
-        $planData = DB::connection('app-manager-sqlite')->table('plans')->where('id', $planId)->first();
+        $planData = DB::connection('app-manager-failsafe')->table('plans')->where('id', $planId)->first();
         $planData = json_decode(json_encode($planData), true);
 
         if ($planData && $shopDomain) {
-            $customDiscounts = DB::connection('app-manager-sqlite')->table('discount_plan')
+            $customDiscounts = DB::connection('app-manager-failsafe')->table('discount_plan')
                 ->where('shop_domain', $shopDomain)->select(['plan_id', 'discount', 'discount_type', 'cycle_count'])->first();
             $customDiscounts = json_decode(json_encode($customDiscounts), true);
             if (!empty($customDiscounts) && ($customDiscounts['plan_id'] == -1 || $planData['id'] == $customDiscounts['plan_id'])) {
@@ -129,7 +129,7 @@ trait FailsafeHelper {
 
         if (!empty($trialActivatedAt) && !empty($planId)) {
 
-            $trialDays = DB::connection('app-manager-sqlite')->table('plans')
+            $trialDays = DB::connection('app-manager-failsafe')->table('plans')
                 ->where('id', $planId)->pluck('trial_days')->first();
 
             $trialStartDate = Carbon::parse($trialActivatedAt);
@@ -139,7 +139,7 @@ trait FailsafeHelper {
                 $remainingDays = now()->diffInDays($trialEndsDate);
             }
 
-            $trialExtendData = DB::connection('app-manager-sqlite')->table('trial_extension')
+            $trialExtendData = DB::connection('app-manager-failsafe')->table('trial_extension')
                 ->where('shop_domain', $shopDomain)->where('plan_id', $planId)->orderByDesc('created_at')->first();
 
             if ($trialExtendData) {
@@ -151,7 +151,7 @@ trait FailsafeHelper {
             return $remainingDays;
         }
 
-        $charge = DB::connection('app-manager-sqlite')->table('charges')
+        $charge = DB::connection('app-manager-failsafe')->table('charges')
             ->where('shop_domain', $shopDomain)->orderByDesc('created_at')->first();
 
         if ($charge && $charge->trial_days) {
@@ -162,7 +162,7 @@ trait FailsafeHelper {
 
             //TODO: Uncomment this code when we implement Shopify trial extension apis
 
-            /*$trialExtendData = DB::connection('app-manager-sqlite')->table('trial_extension')
+            /*$trialExtendData = DB::connection('app-manager-failsafe')->table('trial_extension')
                 ->where('shop_domain', $shopDomain)->where('plan_id', $charge->plan_id)->orderBy('created_at')->first();
             if ($trialExtendData) {
                 $extendTrialStartDate = Carbon::parse($trialExtendData->created_at)->addDays($trialExtendData->days);
@@ -177,7 +177,7 @@ trait FailsafeHelper {
     }
 
     public function getChargeHelper($shop_domain) {
-        $chargeData = DB::connection('app-manager-sqlite')->table('charges')
+        $chargeData = DB::connection('app-manager-failsafe')->table('charges')
             ->where('shop_domain', $shop_domain)->get();
         return [
             'active_charge' => collect($chargeData)->where('status', 'active')->first() ?? null,
@@ -188,12 +188,12 @@ trait FailsafeHelper {
     public function storeChargeHelper($data) {
         $data['sync'] = false;
         $data['process_type'] = 'store-charge';
-        $charge = DB::connection('app-manager-sqlite')->table('charges')->insert($data);
+        $charge = DB::connection('app-manager-failsafe')->table('charges')->insert($data);
         return ['message' => $charge ? 'success' : 'fail'];
     }
 
     public function cancelChargeHelper($shop_domain, $plan_id) {
-        $charge = DB::connection('app-manager-sqlite')->table('charges')
+        $charge = DB::connection('app-manager-failsafe')->table('charges')
             ->where('shop_domain', $shop_domain)->where('plan_id', $plan_id)
             ->update([
                 'status' => 'cancelled',
@@ -203,13 +203,24 @@ trait FailsafeHelper {
     }
 
     public function syncAppManager() {
-
+        $isDBFile = false;
+        $db = DB::connection('app-manager-failsafe');
+        $driver = $db->getConfig('driver');
+        switch ($driver){
+            case "sqlite":
+                $db_path = Storage::disk('public')->path('app-manager/database.sqlite');
+                if (\File::exists($db_path)) {
+                    $isDBFile = true;
+                }
+                break;
+            default:
+                $isDBFile = true;
+        }
         $status = false;
-        $db_path = Storage::disk('public')->path('app-manager/database.sqlite');
-        if (\File::exists($db_path)) {
-            $status = DB::connection('app-manager-sqlite')->getPdo() &&
-                DB::connection('app-manager-sqlite')->getDatabaseName() &&
-                \Schema::connection('app-manager-sqlite')->hasTable('charges');
+        if($isDBFile){
+            $status = DB::connection('app-manager-failsafe')->getPdo() &&
+                DB::connection('app-manager-failsafe')->getDatabaseName() &&
+                \Schema::connection('app-manager-failsafe')->hasTable('charges');
         }
         else {
             $this->initializeFailsafeDB();
@@ -219,7 +230,7 @@ trait FailsafeHelper {
         if ($status) {
             $response = \AppManager::getStatus();
             if ($response->getStatusCode() == 200) {
-                $charges = DB::connection('app-manager-sqlite')->table('charges')
+                $charges = DB::connection('app-manager-failsafe')->table('charges')
                     ->where('sync', 0)->where('process_type', 'store-charge')->get()->toArray();
 
                 if ($charges) {
@@ -228,7 +239,7 @@ trait FailsafeHelper {
 
                         $response = \AppManager::syncCharge($charge);
                         if ($response) {
-                            DB::connection('app-manager-sqlite')->table('charges')
+                            DB::connection('app-manager-failsafe')->table('charges')
                                 ->where('charge_id', $charge['charge_id'])->update([
                                     'sync' => 1,
                                     'process_type' => null
@@ -241,13 +252,37 @@ trait FailsafeHelper {
     }
 
     public function initializeFailsafeDB() {
+        $db = DB::connection('app-manager-failsafe');
+        $driver = $db->getConfig('driver');
+        $database = $db->getConfig('database');
+        switch ($driver){
+            case "sqlite":
+                $disk = Storage::disk('local');
+                \File::ensureDirectoryExists(storage_path('app/app-manager'));
+                $disk->put('app-manager/database.sqlite','', 'public');
+                $database = 'app-manager-sqlite';
+                break;
+            default:
+                $this->dropTables($db);
+        }
+        Artisan::call('migrate', ['--force' => true,'--database' => $database, '--path' => "/vendor/hulkapps/appmanager/migrations"]);
+    }
 
-        $disk = Storage::disk('local');
-        \File::ensureDirectoryExists(storage_path('app/app-manager'),775);
 
-        $disk->put('app-manager/database.sqlite','', 'public');
-
-        Artisan::call('migrate', ['--force' => true,'--database' => 'app-manager-sqlite', '--path' => "/vendor/hulkapps/appmanager/migrations"]);
+    function dropTables($db){
+        $colname = 'Tables_in_' . $db->getConfig('database');
+        $tables = $db->select('SHOW TABLES');
+        $droplist= [];
+        foreach($tables as $table) {
+            $droplist[] = $table->$colname;
+        }
+        if(empty($droplist)) return;
+        $droplist = implode(',', $droplist);
+        $db->beginTransaction();
+        $db->statement('SET FOREIGN_KEY_CHECKS = 0');
+        $db->statement("DROP TABLE $droplist");
+        $db->statement('SET FOREIGN_KEY_CHECKS = 1');
+        $db->commit();
     }
 
     public function serializeData ($data) {
@@ -268,5 +303,33 @@ trait FailsafeHelper {
             }
         }
         return $data;
+    }
+
+    public function hasPlanHelper($data){
+        if (boolval($data['grandfathered'])) {
+            return ['has_plan' => true];
+        }
+        $planPrice = DB::connection('app-manager-failsafe')->table('plans')
+            ->where('id',$data['plan_id'])->pluck('price')->first();
+        if ($planPrice && $planPrice == 0) {
+            return ['has_plan' => true];
+        }
+
+        $remainingDays = $this->getRemainingDays([
+            'trial_activated_at' => $data['trial_activated_at'],
+            'plan_id' => $data['plan_id'],
+            'shop_domain' => $data['shop_domain']
+        ]);
+        if ($remainingDays && $remainingDays > 0) {
+            return ['has_plan' => true];
+        }
+
+        $activeCharge = DB::connection('app-manager-failsafe')->table('charges')
+            ->where('shop_domain',$data['shop_domain'])->where('status','active')->get()->toArray();
+        if (!empty($activeCharge)) {
+            return response()->json(['has_plan' => true]);
+        }
+
+        return response()->json(['has_plan' => false]);
     }
 }

@@ -150,35 +150,42 @@ class PlanController extends Controller
         $this->initializeFailsafeDB();
 
         $data = $request->all();
-
+        $commanFields= [
+            'created_at', 'updated_at'
+        ];
         $marketingBanners = [
             'marketing_banners' => json_encode($data['app_structures'])
         ];
-        DB::connection('app-manager-sqlite')->table('marketing_banners')->insert($marketingBanners);
+        DB::connection('app-manager-failsafe')->table('marketing_banners')->insert($marketingBanners);
 
-        $plans = $this->filterData($data['plans']);
+        $plans = $this->filterData($data['plans'],$commanFields);
         foreach ($plans as $index => $plan) {
             $plans[$index] = $this->serializeData($plan);
             $plans[$index]['feature_plan'] = $plans[$index]['features'];
             unset($plans[$index]['features']);
         }
-        DB::connection('app-manager-sqlite')->table('plans')->insert($plans);
+        DB::connection('app-manager-failsafe')->table('plans')->insert($plans);
 
-        $charges = $this->filterData($data['charges']);
-        DB::connection('app-manager-sqlite')->table('charges')->insert($charges);
+        $charges = $this->filterData($data['charges'],$commanFields);
+        DB::connection('app-manager-failsafe')->table('charges')->insert($charges);
 
-        $discount_plans = $this->filterData($data['discount_plans']);
-        DB::connection('app-manager-sqlite')->table('discount_plan')->insert($discount_plans);
+        $discount_plans = $this->filterData($data['discount_plans'],$commanFields);
+        DB::connection('app-manager-failsafe')->table('discount_plan')->insert($discount_plans);
 
-        $extend_trials = $this->filterData($data['extend_trials']);
-        DB::connection('app-manager-sqlite')->table('trial_extension')->insert($extend_trials);
+        $extend_trials = $this->filterData($data['extend_trials'],$commanFields);
+        DB::connection('app-manager-failsafe')->table('trial_extension')->insert($extend_trials);
 
-        $plan_users = $this->filterData($data['plan_users']);
-        DB::connection('app-manager-sqlite')->table('plan_user')->insert($plan_users);
+        $plan_users = $this->filterData($data['plan_users'],$commanFields);
+        DB::connection('app-manager-failsafe')->table('plan_user')->insert($plan_users);
     }
 
-    public function filterData($data) {
-        $data = collect($data)->map(function ($value, $key) {
+    public function filterData($data,$fields = []) {
+        $data = collect($data)->map(function ($value, $key) use ($fields){
+            if(!empty($fields)){
+                foreach($fields as $field){
+                    $value[$field] = \Carbon\Carbon::parse($value[$field])->format('Y-m-d H:i:s');
+                }
+            }
             return collect($value)->forget('app_id')->toArray();
         })->toArray();
         return $data;
