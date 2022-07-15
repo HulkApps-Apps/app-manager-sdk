@@ -18,13 +18,11 @@ class InitDB extends Command
         $db = DB::connection('app-manager-failsafe');
         $driver = $db->getConfig('driver');
         $database = $db->getConfig('database');
-        switch ($driver){
-            case "sqlite":
-                $disk = Storage::disk('local');
-                \File::ensureDirectoryExists(storage_path('app/app-manager'));
-                $disk->put('app-manager/database.sqlite','', 'public');
-                $database = 'app-manager-sqlite';
-                break;
+        if($driver == 'sqlite'){
+            $disk = Storage::disk('local');
+            \File::ensureDirectoryExists(storage_path('app/app-manager'));
+            $disk->put('app-manager/database.sqlite','', 'public');
+            $database = 'app-manager-sqlite';
         }
 
         Artisan::call('migrate', ['--force' => true,'--database' => $database, '--path' => "/vendor/hulkapps/appmanager/migrations"]);

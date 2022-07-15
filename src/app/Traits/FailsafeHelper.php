@@ -198,19 +198,18 @@ trait FailsafeHelper {
         return ['message' => $charge ? 'success' : 'fail'];
     }
 
-    public function syncAppManager() {
+    public function syncAppManager()
+    {
         $isDBFile = false;
         $db = DB::connection('app-manager-failsafe');
         $driver = $db->getConfig('driver');
-        switch ($driver){
-            case "sqlite":
-                $db_path = Storage::disk('public')->path('app-manager/database.sqlite');
-                if (\File::exists($db_path)) {
-                    $isDBFile = true;
-                }
-                break;
-            default:
+        if ($driver == 'sqlite'){
+            $db_path = Storage::disk('public')->path('app-manager/database.sqlite');
+            if (\File::exists($db_path)) {
                 $isDBFile = true;
+            }
+        } else{
+            $isDBFile = true;
         }
         $status = false;
         if($isDBFile){
@@ -251,34 +250,22 @@ trait FailsafeHelper {
         $db = DB::connection('app-manager-failsafe');
         $driver = $db->getConfig('driver');
         $database = $db->getConfig('database');
-        switch ($driver){
-            case "sqlite":
-                $disk = Storage::disk('local');
-                \File::ensureDirectoryExists(storage_path('app/app-manager'));
-                $disk->put('app-manager/database.sqlite','', 'public');
-                $database = 'app-manager-sqlite';
-                break;
-            default:
-                $this->dropTables($db);
+        if($driver == 'sqlite'){
+            $disk = Storage::disk('local');
+            \File::ensureDirectoryExists(storage_path('app/app-manager'));
+            $disk->put('app-manager/database.sqlite','', 'public');
+            $database = 'app-manager-sqlite';
+        }else{
+            $this->dropTables($database);
         }
         Artisan::call('migrate', ['--force' => true,'--database' => $database, '--path' => "/vendor/hulkapps/appmanager/migrations"]);
     }
 
-    function dropTables($db)
+    function dropTables($database)
     {
-        $colname = 'Tables_in_' . $db->getConfig('database');
-        $tables = $db->select('SHOW TABLES');
-        $droplist = [];
-        foreach ($tables as $table) {
-            $droplist[] = $table->$colname;
+        if($database != null){
+            Artisan::call('migration:fresh', ['--force' => true,'--database' => $database]);
         }
-        if (empty($droplist)) return;
-        $droplist = implode(',', $droplist);
-        $db->beginTransaction();
-        $db->statement('SET FOREIGN_KEY_CHECKS = 0');
-        $db->statement("DROP TABLE $droplist");
-        $db->statement('SET FOREIGN_KEY_CHECKS = 1');
-        $db->commit();
     }
 
     public function serializeData ($data) {
