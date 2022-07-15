@@ -18,7 +18,7 @@ class InitDB extends Command
         $db = DB::connection('app-manager-failsafe');
         $database = $db->getConfig('database');
         if(!empty($database)){
-            Artisan::call('migrate', ['--force' => true,'--database' => 'app-manager-failsafe', '--path' => "/vendor/hulkapps/appmanager/migrations"]);
+            Artisan::call('migrate:fresh', ['--force' => true,'--database' => 'app-manager-failsafe', '--path' => "/vendor/hulkapps/appmanager/migrations"]);
         }
     }
 
