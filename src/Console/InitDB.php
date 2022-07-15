@@ -25,7 +25,7 @@ class InitDB extends Command
             $database = 'app-manager-sqlite';
         }else{
             if(!empty($database)){
-                Artisan::call('migration:fresh', ['--force' => true,'--database' => $database]);
+                Artisan::call('migrate:fresh', ['--force' => true,'--database' => $database]);
             }
         }
 
