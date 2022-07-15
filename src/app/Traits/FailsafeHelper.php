@@ -207,8 +207,10 @@ trait FailsafeHelper {
                 \Schema::connection('app-manager-failsafe')->hasTable('charges');
         }
         catch (\Exception $extends){
+            $status = false;
+        }
+        if(!$status){
             $this->initializeFailsafeDB();
-            $status = true;
         }
 
         if ($status) {
