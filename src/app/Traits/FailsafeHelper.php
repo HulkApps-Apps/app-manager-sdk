@@ -211,6 +211,7 @@ trait FailsafeHelper {
         }
         if(!$status){
             $this->initializeFailsafeDB();
+            $status = true;
         }
 
         if ($status) {
