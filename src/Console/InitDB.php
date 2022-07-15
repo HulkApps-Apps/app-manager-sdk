@@ -23,9 +23,15 @@ class InitDB extends Command
             \File::ensureDirectoryExists(storage_path('app/app-manager'));
             $disk->put('app-manager/database.sqlite','', 'public');
             $database = 'app-manager-sqlite';
+        }else{
+            if(!empty($database)){
+                Artisan::call('migration:fresh', ['--force' => true,'--database' => $database]);
+            }
         }
 
-        Artisan::call('migrate', ['--force' => true,'--database' => $database, '--path' => "/vendor/hulkapps/appmanager/migrations"]);
+        if(!empty($database)){
+            Artisan::call('migrate', ['--force' => true,'--database' => $database, '--path' => "/vendor/hulkapps/appmanager/migrations"]);
+        }
     }
 
 }

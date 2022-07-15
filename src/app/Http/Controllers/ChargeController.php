@@ -32,16 +32,14 @@ class ChargeController extends Controller
             if ($plan['price'] == 0) {
                 $user = DB::table($tableName)->where($storeNameField, $request->shop)
                     ->update([$storePlanField => $plan_id, $storeTrialActivatedAtField => null]);
-                if ($user) {
-                    try {
-                        event(new PlanActivated($plan, null, null));
-                    } catch (\Exception $exception) {
-                        report($exception);
-                    }
-                    Artisan::call('cache:clear');
-                    return \redirect()->route('home',['shop' => $request->shop]);
+                try {
+                    event(new PlanActivated($plan, null, null));
+                } catch (\Exception $exception) {
+                    report($exception);
                 }
-                else throw new ChargeException("Invalid charge");
+                Artisan::call('cache:clear');
+                return \redirect()->route('home',['shop' => $request->shop]);
+
             }
 
             $query = '

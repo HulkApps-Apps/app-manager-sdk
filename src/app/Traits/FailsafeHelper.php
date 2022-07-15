@@ -263,7 +263,7 @@ trait FailsafeHelper {
 
     function dropTables($database)
     {
-        if($database != null){
+        if(!empty($database)){
             Artisan::call('migration:fresh', ['--force' => true,'--database' => $database]);
         }
     }
