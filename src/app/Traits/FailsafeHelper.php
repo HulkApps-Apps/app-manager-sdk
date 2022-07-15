@@ -130,7 +130,7 @@ trait FailsafeHelper {
         if (!empty($trialActivatedAt) && !empty($planId)) {
 
             $trialDays = DB::connection('app-manager-failsafe')->table('plans')
-                ->where('id', $planId)->pluck('trial_days')->first();
+                ->where('id', $planId)->pluck('trial_days')->first() ?? 0;
 
             $trialStartDate = Carbon::parse($trialActivatedAt);
             $trialEndsDate = $trialStartDate->addDays($trialDays);
@@ -147,8 +147,6 @@ trait FailsafeHelper {
                 $remainingExtendedDays = now()->lte($extendTrialStartDate) ? now()->diffInDays($extendTrialStartDate) : 0;
                 $remainingDays = $remainingDays + $remainingExtendedDays;
             }
-
-            return $remainingDays;
         }
 
         $charge = DB::connection('app-manager-failsafe')->table('charges')
@@ -169,11 +167,9 @@ trait FailsafeHelper {
                 $remainingExtendedDays = now()->lte($extendTrialStartDate) ? now()->diffInDays($extendTrialStartDate) : 0;
                 $remainingDays = $remainingDays + $remainingExtendedDays;
             }*/
-
-            return $remainingDays;
         }
 
-        return null;
+            return $remainingDays;
     }
 
     public function getChargeHelper($shop_domain) {
@@ -268,15 +264,15 @@ trait FailsafeHelper {
         Artisan::call('migrate', ['--force' => true,'--database' => $database, '--path' => "/vendor/hulkapps/appmanager/migrations"]);
     }
 
-
-    function dropTables($db){
+    function dropTables($db)
+    {
         $colname = 'Tables_in_' . $db->getConfig('database');
         $tables = $db->select('SHOW TABLES');
-        $droplist= [];
-        foreach($tables as $table) {
+        $droplist = [];
+        foreach ($tables as $table) {
             $droplist[] = $table->$colname;
         }
-        if(empty($droplist)) return;
+        if (empty($droplist)) return;
         $droplist = implode(',', $droplist);
         $db->beginTransaction();
         $db->statement('SET FOREIGN_KEY_CHECKS = 0');
@@ -309,7 +305,7 @@ trait FailsafeHelper {
         if (boolval($data['grandfathered'])) {
             return ['has_plan' => true];
         }
-        $planPrice = DB::connection('app-manager-failsafe')->table('plans')
+        $planPrice = DB::connection('app-manager-sqlite')->table('plans')
             ->where('id',$data['plan_id'])->pluck('price')->first();
         if ($planPrice && $planPrice == 0) {
             return ['has_plan' => true];
@@ -324,12 +320,12 @@ trait FailsafeHelper {
             return ['has_plan' => true];
         }
 
-        $activeCharge = DB::connection('app-manager-failsafe')->table('charges')
+        $activeCharge = DB::connection('app-manager-sqlite')->table('charges')
             ->where('shop_domain',$data['shop_domain'])->where('status','active')->get()->toArray();
         if (!empty($activeCharge)) {
-            return response()->json(['has_plan' => true]);
+            return ['has_plan' => true];
         }
 
-        return response()->json(['has_plan' => false]);
+        return ['has_plan' => false];
     }
 }
