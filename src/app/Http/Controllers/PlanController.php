@@ -118,11 +118,15 @@ class PlanController extends Controller
             return response()->json(['message' => 'shop domain is required'], 422);
         }
 
+        $updateInfo = [
+            'plan_id' => $request->get('plan_id'),
+            'trial_activated_at' => Carbon::now()
+        ];
+        /*if(isset($updateInfo['total_trial_days'])){
+            $updateInfo[$updateInfo['total_trial_days']] =
+        }*/
         $user = DB::table($tableName)->where($shopify_fields['name'], $request->get('shop_domain'))
-            ->limit(1)->update([
-                'plan_id' => $request->get('plan_id'),
-                'trial_activated_at' => Carbon::now()
-            ]);
+            ->limit(1)->update($updateInfo);
         if ($user) {
             $this->burstCache($request);
             return response()->json(['status' => true]);

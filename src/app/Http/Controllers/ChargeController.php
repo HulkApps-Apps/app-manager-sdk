@@ -30,6 +30,19 @@ class ChargeController extends Controller
 
             $plan = \AppManager::getPlan($plan_id, $request->shop);
             if ($plan['price'] == 0) {
+                $apiVersion = config('app-manager.shopify_api_version');
+
+                $storedCharge = \AppManager::getCharge($request->shop);
+                if ($storedCharge && !empty($storedCharge['active_charge'])) {
+                    $storeTokenField = config('app-manager.field_names.shopify_token', 'shopify_token');
+                    $charge = Client::withHeaders(["X-Shopify-Access-Token" => $shop->$storeTokenField])
+                        ->delete("https://{$shop->$storeNameField}/admin/api/$apiVersion/recurring_application_charges/{$storedCharge['active_charge']['charge_id']}.json");
+
+                    if (!empty($shop->$storePlanField)) {
+                        \AppManager::cancelCharge($request->shop, $shop->$storePlanField);
+                    }
+                }
+
                 $user = DB::table($tableName)->where($storeNameField, $request->shop)
                     ->update([$storePlanField => $plan_id, $storeTrialActivatedAtField => null]);
                 try {
@@ -38,8 +51,7 @@ class ChargeController extends Controller
                     report($exception);
                 }
                 Artisan::call('cache:clear');
-                return \redirect()->route('home',['shop' => $request->shop]);
-
+                return response()->json(['status' => true,'plan_type' =>'free_plan']);
             }
 
             $query = '
@@ -153,10 +165,9 @@ class ChargeController extends Controller
             $charge['shop_domain'] = $request->shop;
             $charge['interval'] = $plan['interval']['value'];
 
-            if (!empty($shop->$storePlanField)) {
-
+            /*if (!empty($shop->$storePlanField)) {
                 \AppManager::cancelCharge($request->shop, $shop->$storePlanField);
-            }
+            }*/
 
             unset($charge['api_client_id'], $charge['return_url'], $charge['decorated_return_url'], $charge['id']);
             $data = \AppManager::storeCharge($charge);
