@@ -73,7 +73,7 @@ trait FailsafeHelper {
         $customDiscounts = DB::connection('app-manager-failsafe')->table('discount_plan')->where('shop_domain', $shop_domain)
             ->orderByDesc('created_at')->get(['plan_id','discount', 'discount_type', 'cycle_count'])->first();
         if ($customDiscounts) {
-            $customDiscounts = $customDiscounts->toArray();
+            $customDiscounts = json_decode(json_encode($customDiscounts), true);
             $customDiscounts = [
                 $customDiscounts['plan_id'] => $customDiscounts
             ];
@@ -176,8 +176,8 @@ trait FailsafeHelper {
         $chargeData = DB::connection('app-manager-failsafe')->table('charges')
             ->where('shop_domain', $shop_domain)->get();
         return [
-            'active_charge' => collect($chargeData)->where('status', 'active')->first() ?? null,
-            'cancelled_charge' => collect($chargeData)->where('status', 'cancelled')->sortByDesc('created_at')->first() ?? null
+            'active_charge' => collect($chargeData->where('status', 'active')->first())->toArray(),
+            'cancelled_charge' => collect($chargeData->where('status', 'cancelled')->sortByDesc('created_at')->first())->toArray()
         ];
     }
 
