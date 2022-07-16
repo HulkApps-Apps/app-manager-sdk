@@ -42,9 +42,9 @@ class ChargeController extends Controller
                         \AppManager::cancelCharge($request->shop, $shop->$storePlanField);
                     }
                 }
-
+                $storeGrandfathered = config('app-manager.field_names.grandfathered', 'grandfathered');
                 $user = DB::table($tableName)->where($storeNameField, $request->shop)
-                    ->update([$storePlanField => $plan_id, $storeTrialActivatedAtField => null]);
+                    ->update([$storePlanField => $plan_id, $storeTrialActivatedAtField => null,$storeGrandfathered => null]);
                 try {
                     event(new PlanActivated($plan, null, null));
                 } catch (\Exception $exception) {
