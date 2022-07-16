@@ -4,6 +4,7 @@ namespace HulkApps\AppManager\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class InitDB extends Command
@@ -14,14 +15,11 @@ class InitDB extends Command
 
 
     public function handle() {
-
-        $disk = Storage::disk('local');
-        \File::ensureDirectoryExists(storage_path('app/app-manager'),775);
-
-        $disk->put('app-manager/database.sqlite','', 'public');
-
-        Artisan::call('migrate', ['--force' => true,'--database' => 'app-manager-sqlite', '--path' => "/vendor/hulkapps/appmanager/migrations"]);
-
+        $db = DB::connection('app-manager-failsafe');
+        $database = $db->getConfig('database');
+        if(!empty($database)){
+            Artisan::call('migrate:fresh', ['--force' => true,'--database' => 'app-manager-failsafe', '--path' => "/vendor/hulkapps/appmanager/migrations"]);
+        }
     }
 
 }

@@ -42,14 +42,26 @@ According to the example in the file, list all features of the app in `config/pl
 Ensure you use the UIID from this <a href="https://docs.google.com/spreadsheets/d/1cw2nSKxAHTGn4Cfa98RNdtfHT3zdtwu9bQD7s7hErXc/edit#gid=0">sheet</a>, and don't forget to mention the app name after using the UUID
 
 #### 3.Initialize Fail-safe Database
-Initialize SQLite Fail-safe database in `config/database.php` 
+Initialize MYSQL Fail-safe database in `config/database.php` 
 ```php
-'app-manager-sqlite' => [
-    'driver' => 'sqlite',
-    'database' => storage_path('app/app-manager/database.sqlite'),
-    'prefix' => '',
-    'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-];
+'app-manager-failsafe' => [
+			'driver' => 'mysql',
+			'host' => env('FAILSAFE_DB_HOST', '127.0.0.1'),
+			'port' => env('FAILSAFE_DB_PORT', '3306'),
+			'database' => env('FAILSAFE_DB_DATABASE', 'forge'),
+			'username' => env('FAILSAFE_DB_USERNAME', 'forge'),
+			'password' => env('FAILSAFE_DB_PASSWORD', ''),
+			'unix_socket' => env('FAILSAFE_DB_SOCKET', ''),
+			'charset' => 'utf8mb4',
+			'collation' => 'utf8mb4_unicode_ci',
+			'prefix' => '',
+			'prefix_indexes' => true,
+			'strict' => false,
+			'engine' => null,
+			'options' => extension_loaded('pdo_mysql') ? array_filter([
+				PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+			]) : [],
+		];
 ```
 
 #### 4.Listen Plan Activation Event
@@ -96,16 +108,13 @@ $user->getRemainingDays(); // Calculate the remaining days of the active plan
 $user->getPlanData(); // Return plan details
 
 $user->getChargeData(); // Return active and recent cancelled charge
+
+$user->setDefaultPlan($plan_id); // Set default plan_id( plan_id Optional)
 ```
 
 <a name="step5"></a>
 ### Extras
 Set Shopify API version to 2022-04.
-
-There may be permission issues with database storage, so change permissions on the storage directory
-```bash
-sudo chown -R www-data:www-data storage/app/app-manager
-``` 
 
 ### Testing
 

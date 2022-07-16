@@ -30,18 +30,28 @@ class ChargeController extends Controller
 
             $plan = \AppManager::getPlan($plan_id, $request->shop);
             if ($plan['price'] == 0) {
-                $user = DB::table($tableName)->where($storeNameField, $request->shop)
-                    ->update([$storePlanField => $plan_id, $storeTrialActivatedAtField => null]);
-                if ($user) {
-                    try {
-                        event(new PlanActivated($plan, null, null));
-                    } catch (\Exception $exception) {
-                        report($exception);
+                $apiVersion = config('app-manager.shopify_api_version');
+
+                $storedCharge = \AppManager::getCharge($request->shop);
+                if ($storedCharge && !empty($storedCharge['active_charge'])) {
+                    $storeTokenField = config('app-manager.field_names.shopify_token', 'shopify_token');
+                    $charge = Client::withHeaders(["X-Shopify-Access-Token" => $shop->$storeTokenField])
+                        ->delete("https://{$shop->$storeNameField}/admin/api/$apiVersion/recurring_application_charges/{$storedCharge['active_charge']['charge_id']}.json");
+
+                    if (!empty($shop->$storePlanField)) {
+                        \AppManager::cancelCharge($request->shop, $shop->$storePlanField);
                     }
-                    Artisan::call('cache:clear');
-                    return \redirect()->route('home',['shop' => $request->shop]);
                 }
-                else throw new ChargeException("Invalid charge");
+                $storeGrandfathered = config('app-manager.field_names.grandfathered', 'grandfathered');
+                $user = DB::table($tableName)->where($storeNameField, $request->shop)
+                    ->update([$storePlanField => $plan_id, $storeTrialActivatedAtField => null,$storeGrandfathered => null]);
+                try {
+                    event(new PlanActivated($plan, null, null));
+                } catch (\Exception $exception) {
+                    report($exception);
+                }
+                Artisan::call('cache:clear');
+                return response()->json(['status' => true,'plan_type' =>'free_plan']);
             }
 
             $query = '
@@ -137,6 +147,7 @@ class ChargeController extends Controller
         $storeName = config('app-manager.field_names.name', 'name');
         $storeToken = config('app-manager.field_names.shopify_token');
         $storePlanField = config('app-manager.field_names.plan_id', 'plan_id');
+        $storeGrandfathered = config('app-manager.field_names.grandfathered', 'grandfathered');
 
         $shop = DB::table($tableName)->where($storeName, $request->shop)->first();
         $apiVersion = config('app-manager.shopify_api_version');
@@ -155,10 +166,9 @@ class ChargeController extends Controller
             $charge['shop_domain'] = $request->shop;
             $charge['interval'] = $plan['interval']['value'];
 
-            if (!empty($shop->$storePlanField)) {
-
+            /*if (!empty($shop->$storePlanField)) {
                 \AppManager::cancelCharge($request->shop, $shop->$storePlanField);
-            }
+            }*/
 
             unset($charge['api_client_id'], $charge['return_url'], $charge['decorated_return_url'], $charge['id']);
             $data = \AppManager::storeCharge($charge);
@@ -166,7 +176,7 @@ class ChargeController extends Controller
             if ($data['message'] === "success") {
 
                 Artisan::call('cache:clear');
-                DB::table($tableName)->where($storeName, $request->shop)->update([$storePlanField => $request->plan]);
+                DB::table($tableName)->where($storeName, $request->shop)->update([$storePlanField => $request->plan, $storeGrandfathered => null]);
                 $chargeData = \AppManager::getCharge($shop->$storeName);
 
                 try {
