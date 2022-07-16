@@ -135,6 +135,7 @@ class ChargeController extends Controller
         $storeName = config('app-manager.field_names.name', 'name');
         $storeToken = config('app-manager.field_names.shopify_token');
         $storePlanField = config('app-manager.field_names.plan_id', 'plan_id');
+        $storeGrandfathered = config('app-manager.field_names.grandfathered', 'grandfathered');
 
         $shop = DB::table($tableName)->where($storeName, $request->shop)->first();
         $apiVersion = config('app-manager.shopify_api_version');
@@ -164,7 +165,7 @@ class ChargeController extends Controller
             if ($data['message'] === "success") {
 
                 Artisan::call('cache:clear');
-                DB::table($tableName)->where($storeName, $request->shop)->update([$storePlanField => $request->plan]);
+                DB::table($tableName)->where($storeName, $request->shop)->update([$storePlanField => $request->plan, $storeGrandfathered => null]);
                 $chargeData = \AppManager::getCharge($shop->$storeName);
 
                 try {
