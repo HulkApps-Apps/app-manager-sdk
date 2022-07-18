@@ -114,17 +114,21 @@ class PlanController extends Controller
         $tableName = config('app-manager.shop_table_name', 'users');
         $shopify_fields = config('app-manager.field_names');
         $shop_domain = $request->get('shop_domain');
+        $plan_id = $request->get('plan_id');
         if (!$shop_domain) {
             return response()->json(['message' => 'shop domain is required'], 422);
         }
 
         $updateInfo = [
-            'plan_id' => $request->get('plan_id'),
+            'plan_id' => $plan_id,
             'trial_activated_at' => Carbon::now()
         ];
-        /*if(isset($updateInfo['total_trial_days'])){
-            $updateInfo[$updateInfo['total_trial_days']] =
-        }*/
+        if(isset($shopify_fields['total_trial_days'])){
+            $plan = \AppManager::getPlan($plan_id);
+            if(!empty($plan)){
+                $updateInfo[$shopify_fields['total_trial_days']] = $plan['trial_days']?? 0;
+            }
+        }
         $user = DB::table($tableName)->where($shopify_fields['name'], $request->get('shop_domain'))
             ->limit(1)->update($updateInfo);
         if ($user) {

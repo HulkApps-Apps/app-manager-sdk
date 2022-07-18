@@ -43,8 +43,13 @@ class ChargeController extends Controller
                     }
                 }
                 $storeGrandfathered = config('app-manager.field_names.grandfathered', 'grandfathered');
+                $userUpdateInfo = [$storePlanField => $plan_id, $storeTrialActivatedAtField => null,$storeGrandfathered => null];
+                $shopify_fields = config('app-manager.field_names');
+                if(isset($shopify_fields['total_trial_days'])){
+                    $userUpdateInfo[$shopify_fields['total_trial_days']] = $plan['trial_days']?? 0;
+                }
                 $user = DB::table($tableName)->where($storeNameField, $request->shop)
-                    ->update([$storePlanField => $plan_id, $storeTrialActivatedAtField => null,$storeGrandfathered => null]);
+                    ->update($userUpdateInfo);
                 try {
                     event(new PlanActivated($plan, null, null));
                 } catch (\Exception $exception) {
@@ -176,7 +181,12 @@ class ChargeController extends Controller
             if ($data['message'] === "success") {
 
                 Artisan::call('cache:clear');
-                DB::table($tableName)->where($storeName, $request->shop)->update([$storePlanField => $request->plan, $storeGrandfathered => null]);
+                $userUpdateInfo = [$storePlanField => $request->plan, $storeGrandfathered => null];
+                $shopify_fields = config('app-manager.field_names');
+                if(isset($shopify_fields['total_trial_days'])){
+                    $userUpdateInfo[$shopify_fields['total_trial_days']] = $plan['trial_days']?? 0;
+                }
+                DB::table($tableName)->where($storeName, $request->shop)->update($userUpdateInfo);
                 $chargeData = \AppManager::getCharge($shop->$storeName);
 
                 try {
