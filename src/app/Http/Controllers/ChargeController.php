@@ -99,10 +99,11 @@ class ChargeController extends Controller
                         $usedDays = $currentPlan['trial_days'] - $remaining;
                         if($usedDays > 0){
                             $days = $trialDays - $usedDays;
-                            $remaining = $days > 0?$days:0;
+                            $trialDays = $days > 0?$days:0;
                         }
+                    }else{
+                        $trialDays = $remaining;
                     }
-                    $trialDays = $remaining;
                 }
                 //$trialDays = $remaining !== null ? $remaining : $trialDays;
             }
