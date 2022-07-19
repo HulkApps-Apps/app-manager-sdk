@@ -158,6 +158,11 @@ trait FailsafeHelper {
                 $remainingDays = now()->diffInDays($trialEndsDate);
             }
 
+            //ADD EXTRA DAY
+            if(now()->diffInDays(Carbon::parse($charge->created_at)) == 0){
+                $remainingDays++;
+            }
+
             //TODO: Uncomment this code when we implement Shopify trial extension apis
 
             /*$trialExtendData = DB::connection('app-manager-failsafe')->table('trial_extension')

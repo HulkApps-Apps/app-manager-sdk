@@ -10,6 +10,7 @@ use HulkApps\AppManager\GraphQL\GraphQL;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 
@@ -92,8 +93,18 @@ class ChargeController extends Controller
             if (!empty($shop->$storePlanField) && $trialDays) {
 
                 $remaining = \AppManager::getRemainingDays($shop->$storeNameField, $shop->$storeTrialActivatedAtField, $shop->$storePlanField);
-
-                $trialDays = $remaining !== null ? $remaining : $trialDays;
+                if($remaining !== null){
+                    if($shop->$storePlanField != null){
+                        $currentPlan = \AppManager::getPlan($shop->$storePlanField);
+                        $usedDays = $currentPlan['trial_days'] - $remaining;
+                        if($usedDays > 0){
+                            $days = $trialDays - $usedDays;
+                            $remaining = $days > 0??0;
+                        }
+                    }
+                    $trialDays = $remaining;
+                }
+                //$trialDays = $remaining !== null ? $remaining : $trialDays;
             }
 
             $discount_type = $plan['discount_type'] ?? "percentage";
