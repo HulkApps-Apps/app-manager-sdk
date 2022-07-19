@@ -116,6 +116,13 @@ $user->setDefaultPlan($plan_id); // Set default plan_id( plan_id Optional)
 ### Extras
 Set Shopify API version to 2022-04.
 
+
+#### Store plan's total trial Days in shop table (Optional)
+Set total_trial_days field name in config/app-manager.php
+```php
+'total_trial_days' => env('TOTAL_TRIAL_DAYS', 'toal_trial_days'),
+```
+
 ### Testing
 
 ```bash

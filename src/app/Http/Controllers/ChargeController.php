@@ -10,6 +10,7 @@ use HulkApps\AppManager\GraphQL\GraphQL;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 
@@ -43,8 +44,13 @@ class ChargeController extends Controller
                     }
                 }
                 $storeGrandfathered = config('app-manager.field_names.grandfathered', 'grandfathered');
+                $userUpdateInfo = [$storePlanField => $plan_id, $storeTrialActivatedAtField => null,$storeGrandfathered => null];
+                $shopify_fields = config('app-manager.field_names');
+                if(isset($shopify_fields['total_trial_days'])){
+                    $userUpdateInfo[$shopify_fields['total_trial_days']] = $plan['trial_days']?? 0;
+                }
                 $user = DB::table($tableName)->where($storeNameField, $request->shop)
-                    ->update([$storePlanField => $plan_id, $storeTrialActivatedAtField => null,$storeGrandfathered => null]);
+                    ->update($userUpdateInfo);
                 try {
                     event(new PlanActivated($plan, null, null));
                 } catch (\Exception $exception) {
@@ -87,8 +93,18 @@ class ChargeController extends Controller
             if (!empty($shop->$storePlanField) && $trialDays) {
 
                 $remaining = \AppManager::getRemainingDays($shop->$storeNameField, $shop->$storeTrialActivatedAtField, $shop->$storePlanField);
-
-                $trialDays = $remaining !== null ? $remaining : $trialDays;
+                if($remaining !== null){
+                    if($shop->$storePlanField != null){
+                        $currentPlan = \AppManager::getPlan($shop->$storePlanField);
+                        $usedDays = $currentPlan['trial_days'] - $remaining;
+                        if($usedDays > 0){
+                            $days = $trialDays - $usedDays;
+                            $remaining = $days > 0??0;
+                        }
+                    }
+                    $trialDays = $remaining;
+                }
+                //$trialDays = $remaining !== null ? $remaining : $trialDays;
             }
 
             $discount_type = $plan['discount_type'] ?? "percentage";
@@ -176,7 +192,12 @@ class ChargeController extends Controller
             if ($data['message'] === "success") {
 
                 Artisan::call('cache:clear');
-                DB::table($tableName)->where($storeName, $request->shop)->update([$storePlanField => $request->plan, $storeGrandfathered => null]);
+                $userUpdateInfo = [$storePlanField => $request->plan, $storeGrandfathered => null];
+                $shopify_fields = config('app-manager.field_names');
+                if(isset($shopify_fields['total_trial_days'])){
+                    $userUpdateInfo[$shopify_fields['total_trial_days']] = $plan['trial_days']?? 0;
+                }
+                DB::table($tableName)->where($storeName, $request->shop)->update($userUpdateInfo);
                 $chargeData = \AppManager::getCharge($shop->$storeName);
 
                 try {
