@@ -44,7 +44,7 @@ class ChargeController extends Controller
                     }
                 }
                 $storeGrandfathered = config('app-manager.field_names.grandfathered', 'grandfathered');
-                $userUpdateInfo = [$storePlanField => $plan_id, $storeTrialActivatedAtField => null,$storeGrandfathered => null];
+                $userUpdateInfo = [$storePlanField => $plan_id, $storeTrialActivatedAtField => null,$storeGrandfathered => 0];
                 $shopify_fields = config('app-manager.field_names');
                 if(isset($shopify_fields['total_trial_days'])){
                     $userUpdateInfo[$shopify_fields['total_trial_days']] = $plan['trial_days']?? 0;
@@ -93,7 +93,7 @@ class ChargeController extends Controller
             if (!empty($shop->$storePlanField) && $trialDays) {
 
                 $remaining = \AppManager::getRemainingDays($shop->$storeNameField, $shop->$storeTrialActivatedAtField, $shop->$storePlanField);
-                if($remaining !== null){
+                /*if($remaining !== null){
                     if($shop->$storePlanField != null){
                         $currentPlan = \AppManager::getPlan($shop->$storePlanField);
                         $usedDays = $currentPlan['trial_days'] - $remaining;
@@ -103,8 +103,8 @@ class ChargeController extends Controller
                         }
                     }
                     $trialDays = $remaining;
-                }
-                //$trialDays = $remaining !== null ? $remaining : $trialDays;
+                }*/
+                $trialDays = $remaining !== null ? $remaining : $trialDays;
             }
 
             $discount_type = $plan['discount_type'] ?? "percentage";
@@ -192,7 +192,7 @@ class ChargeController extends Controller
             if ($data['message'] === "success") {
 
                 Artisan::call('cache:clear');
-                $userUpdateInfo = [$storePlanField => $request->plan, $storeGrandfathered => null];
+                $userUpdateInfo = [$storePlanField => $request->plan, $storeGrandfathered => 0];
                 $shopify_fields = config('app-manager.field_names');
                 if(isset($shopify_fields['total_trial_days'])){
                     $userUpdateInfo[$shopify_fields['total_trial_days']] = $plan['trial_days']?? 0;
