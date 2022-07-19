@@ -93,18 +93,18 @@ class ChargeController extends Controller
             if (!empty($shop->$storePlanField) && $trialDays) {
 
                 $remaining = \AppManager::getRemainingDays($shop->$storeNameField, $shop->$storeTrialActivatedAtField, $shop->$storePlanField);
-                /*if($remaining !== null){
+                if($remaining !== null){
                     if($shop->$storePlanField != null){
                         $currentPlan = \AppManager::getPlan($shop->$storePlanField);
                         $usedDays = $currentPlan['trial_days'] - $remaining;
                         if($usedDays > 0){
                             $days = $trialDays - $usedDays;
-                            $remaining = $days > 0??0;
+                            $remaining = $days > 0?$days:0;
                         }
                     }
                     $trialDays = $remaining;
-                }*/
-                $trialDays = $remaining !== null ? $remaining : $trialDays;
+                }
+                //$trialDays = $remaining !== null ? $remaining : $trialDays;
             }
 
             $discount_type = $plan['discount_type'] ?? "percentage";
@@ -168,11 +168,15 @@ class ChargeController extends Controller
         $shop = DB::table($tableName)->where($storeName, $request->shop)->first();
         $apiVersion = config('app-manager.shopify_api_version');
 
+        // Cancel charge
+        if(!$request->charge_id){
+            return \redirect()->route('home',['shop' => $shop->$storeName]);
+        }
+
         $charge = Client::withHeaders(["X-Shopify-Access-Token" => $shop->$storeToken])
             ->get("https://{$shop->$storeName}/admin/api/$apiVersion/recurring_application_charges/{$request->charge_id}.json")->json();
 
         $plan = \AppManager::getPlan($request->plan, $shop->id);
-
         if (!empty($charge['recurring_application_charge'])) {
 
             $charge = $charge['recurring_application_charge'];
