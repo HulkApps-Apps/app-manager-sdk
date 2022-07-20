@@ -275,7 +275,7 @@ trait FailsafeHelper {
         if (boolval($data['grandfathered'])) {
             return ['has_plan' => true];
         }
-        $planPrice = DB::connection('app-manager-sqlite')->table('plans')
+        $planPrice = DB::connection('app-manager-failsafe')->table('plans')
             ->where('id',$data['plan_id'])->pluck('price')->first();
         if ($planPrice && $planPrice == 0) {
             return ['has_plan' => true];
@@ -290,7 +290,7 @@ trait FailsafeHelper {
             return ['has_plan' => true];
         }
 
-        $activeCharge = DB::connection('app-manager-sqlite')->table('charges')
+        $activeCharge = DB::connection('app-manager-failsafe')->table('charges')
             ->where('shop_domain',$data['shop_domain'])->where('status','active')->get()->toArray();
         if (!empty($activeCharge)) {
             return ['has_plan' => true];
