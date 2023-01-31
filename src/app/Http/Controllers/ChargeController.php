@@ -191,7 +191,7 @@ class ChargeController extends Controller
                 \AppManager::cancelCharge($request->shop, $shop->$storePlanField);
             }*/
 
-            unset($charge['api_client_id'], $charge['return_url'], $charge['decorated_return_url'], $charge['id']);
+            unset($charge['api_client_id'], $charge['return_url'], $charge['decorated_return_url'], $charge['id'], $charge['id'],$charge['currency']);
             $data = \AppManager::storeCharge($charge);
 
             if ($data['message'] === "success") {
