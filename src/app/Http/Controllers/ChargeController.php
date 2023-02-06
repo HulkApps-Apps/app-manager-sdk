@@ -144,6 +144,17 @@ class ChargeController extends Controller
                 ],
             ];
 
+            //allow to add additional charge
+            if(isset($plan['is_external_charge']) && $plan['is_external_charge']){
+                $variables['lineItems'][]['plan']['appUsagePricingDetails'] =array_filter([
+                    'terms' => $plan['terms'],
+                    'cappedAmount' => [
+                        'amount' => $plan['external_charge_limit'],
+                        'currencyCode' => "USD"
+                    ]
+                ]);
+            }
+
             try {
                 $response = GraphQL::shop(get_object_vars($shop))->query($query)->withParams($variables)->send();
             } catch (GraphQLException $exception) {
