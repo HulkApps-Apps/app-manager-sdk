@@ -41,6 +41,9 @@ class CreateAppManagerTables extends Migration
 			$table->boolean('choose_later_plan')->nullable();
 			$table->text('affiliate')->nullable();
 			$table->text('feature_plan')->nullable();
+            $table->boolean('is_external_charge')->default(false);
+            $table->integer('external_charge_limit')->default(10000);
+            $table->string('terms')->nullable();
 			$table->dateTime('deleted_at')->nullable();
 			$table->timestamps();
 		});
@@ -65,9 +68,6 @@ class CreateAppManagerTables extends Migration
 			$table->string('shop_domain');
 			$table->boolean('sync')->default(true);
             $table->string('process_type')->nullable();
-            $table->boolean('is_external_charge')->default(false);
-            $table->integer('external_charge_limit')->default(10000);
-            $table->string('terms')->nullable();
 			$table->timestamps();
 		});
 
