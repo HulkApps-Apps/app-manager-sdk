@@ -145,7 +145,7 @@ class ChargeController extends Controller
             ];
 
             //allow to add additional charge
-            if(isset($plan['is_external_charge']) && $plan['is_external_charge']){
+            if($plan['interval']['value'] == 'EVERY_30_DAYS' && isset($plan['is_external_charge']) && $plan['is_external_charge']){
                 $variables['lineItems'][]['plan']['appUsagePricingDetails'] =array_filter([
                     'terms' => $plan['terms'],
                     'cappedAmount' => [
