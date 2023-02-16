@@ -30,7 +30,7 @@ class ChargeController extends Controller
         if ($shop) {
 
             $plan = \AppManager::getPlan($plan_id, $request->shop);
-            if ($plan['price'] == 0) {
+            if ($plan['price'] == 0 && (!isset($plan['is_external_charge']) || !$plan['is_external_charge'])) {
                 $apiVersion = config('app-manager.shopify_api_version');
 
                 $storedCharge = \AppManager::getCharge($request->shop);
