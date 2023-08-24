@@ -89,7 +89,10 @@ class ChargeController extends Controller
 
             $trialDays = $plan['trial_days'] ?? 0;
             $requestData = ['shop' => $shop->$storeNameField, 'timestamp' => now()->unix() * 1000, 'plan' => $plan_id];
-
+            //add host
+            if($request->has('host') && !empty($request->host)){
+                $requestData['host'] = $request->host;
+            }
             if (!empty($shop->$storePlanField) && $trialDays) {
 
                 $remaining = \AppManager::getRemainingDays($shop->$storeNameField, $shop->$storeTrialActivatedAtField, $shop->$storePlanField);
@@ -179,10 +182,14 @@ class ChargeController extends Controller
 
         $shop = DB::table($tableName)->where($storeName, $request->shop)->first();
         $apiVersion = config('app-manager.shopify_api_version');
-
+        $responseData = ['shop' => $shop->$storeName];
+        //add host
+        if($request->has('host') && !empty($request->host)){
+            $responseData['host'] = $request->host;
+        }
         // Cancel charge
         if(!$request->charge_id){
-            return \redirect()->route('home',['shop' => $shop->$storeName]);
+            return \redirect()->route('home',$responseData);
         }
 
         $charge = Client::withHeaders(["X-Shopify-Access-Token" => $shop->$storeToken])
@@ -225,6 +232,6 @@ class ChargeController extends Controller
         } else throw new ChargeException("Invalid charge");
 
 
-        return \redirect()->route('home',['shop' => $shop->$storeName]);
+        return \redirect()->route('home',$responseData);
     }
 }
