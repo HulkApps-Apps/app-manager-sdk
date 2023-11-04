@@ -13,7 +13,7 @@ trait HasPlan
             if ($this->{$shopify_fields['grandfathered']}) {
                 return true;
             }
-            if (!$this->plan_id) {
+            if (!$this->{$shopify_fields['plan_id']}) {
                 return false;
             }
             $remainingDays = $this->getRemainingDays();
@@ -26,15 +26,15 @@ trait HasPlan
     }
 
     public function hasPlan() {
-        if (!$this->plan_id) {
+        $shopify_fields = config('app-manager.field_names');
+        if (!$this->{$shopify_fields['plan_id']}) {
             return false;
         }
-        $shopify_fields = config('app-manager.field_names');
         return Cache::rememberForever('app-manager.has_plan_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at, function () use ($shopify_fields) {
             $response = \AppManager::hasPlan([
                 'grandfathered' => $this->{$shopify_fields['grandfathered']},
                 'shop_domain' => $this->{$shopify_fields['name']},
-                'plan_id' => $this->plan_id,
+                'plan_id' => $this->{$shopify_fields['plan_id']},
                 'trial_activated_at' => $this->{$shopify_fields['trial_activated_at']},
             ]);
             return $response['has_plan'] ?? false;
@@ -44,7 +44,7 @@ trait HasPlan
     public function planFeatures() {
         $shopify_fields = config('app-manager.field_names');
         return Cache::rememberForever('app-manager.plan_feature_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at, function () use ($shopify_fields) {
-            $planId = $this->plan_id;
+            $planId = $this->{$shopify_fields['plan_id']};
 
             if (!$planId) {
                 return [];
@@ -101,7 +101,7 @@ trait HasPlan
         return Cache::rememberForever('app-manager.plan_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at, function () use ($shopify_fields, $planId) {
 
             if (!$planId) {
-                $planId = $this->plan_id;
+                $planId = $this->{$shopify_fields['plan_id']};
             }
             return \AppManager::getPlan($planId, $this->{$shopify_fields['name']});
         });
@@ -116,18 +116,18 @@ trait HasPlan
     }
 
     public function setDefaultPlan($plan_id = null) {
+        $shopify_fields = config('app-manager.field_names');
         if (!$plan_id) {
-            $shopify_fields = config('app-manager.field_names');
             $plans = \AppManager::getPlans($this->{$shopify_fields['name']});
             $freePlanId = collect($plans)->where('price', 0)->where('public', true)->pluck('id')->first();
             if (!$freePlanId) {
                 throw new MissingPlanException('Free Plan is not available');
             }
-            $this->plan_id = $freePlanId;
+            $this->{$shopify_fields['plan_id']} = $freePlanId;
             $this->save();
         }
         else {
-            $this->plan_id = $plan_id;
+            $this->{$shopify_fields['plan_id']} = $plan_id;
             $this->save();
         }
     }

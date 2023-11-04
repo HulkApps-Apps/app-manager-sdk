@@ -52,6 +52,7 @@ class ChargeController extends Controller
                 $user = DB::table($tableName)->where($storeNameField, $request->shop)
                     ->update($userUpdateInfo);
                 try {
+                    $plan['shop_domain'] = $request->shop;
                     event(new PlanActivated($plan, null, null));
                 } catch (\Exception $exception) {
                     report($exception);
@@ -149,10 +150,12 @@ class ChargeController extends Controller
 
             //allow to add additional charge
             if($plan['interval']['value'] == 'EVERY_30_DAYS' && isset($plan['is_external_charge']) && $plan['is_external_charge']){
+                $cappedAmount = ($request->has('capped_amount') && $request->capped_amount > 0)?$request->capped_amount:$plan['external_charge_limit'];
+                $terms = ($request->has('terms') && $request->terms !== null)?$request->terms:$plan['terms'];
                 $variables['lineItems'][]['plan']['appUsagePricingDetails'] =array_filter([
-                    'terms' => $plan['terms'],
+                    'terms' => $terms,
                     'cappedAmount' => [
-                        'amount' => $plan['external_charge_limit'],
+                        'amount' => $cappedAmount,
                         'currencyCode' => "USD"
                     ]
                 ]);
