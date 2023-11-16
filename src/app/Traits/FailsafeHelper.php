@@ -121,6 +121,17 @@ trait FailsafeHelper {
         return $this->unSerializeData($planData);
     }
 
+    public function prepareDiscount($data) {
+        $code = $data['code'];
+        $reinstall = $data['reinstall'];
+        $shopDomain = $data['shop_domain'] ?? null;
+
+        $discountData = DB::connection('app-manager-failsafe')->table('discounts')->where('code', $code)->first();
+        $discountData = json_decode(json_encode($discountData), true);
+
+        return $this->unSerializeData($discountData);
+    }
+
     public function prepareRemainingDays($data) {
         $trialActivatedAt = $data['trial_activated_at'];
         $planId = $data['plan_id'];

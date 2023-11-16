@@ -64,8 +64,18 @@ class PlanController extends Controller
                 }
             }
 
+            $promotionalDiscount=[];
+            $discountCookie = \AppManager::resolveFromCookies();
+
+            if ($discountCookie !== null) {
+                $codeType = $discountCookie['codeType'];
+                $code = $discountCookie['code'];
+                $promotionalDiscount = \AppManager::getPromotionalDiscount($shopDomain, $codeType, $code);
+            }
+
             return [
                 'plans' => $plans,
+                'promotional_discount' => $promotionalDiscount,
                 'shopify_plan' => $shopify_plan,
                 'plan' => $plan,
                 'default_plan_id' => $defaultPlanId,
