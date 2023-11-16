@@ -59,7 +59,7 @@ class AppManager
     public function getPromotionalDiscount($shop_domain = null, $codeType, $code) {
 
         try {
-            $data = $this->client->get('promotional-discount', ['shop_domain' => $shop_domain, 'reinstall' => false, 'code_type' => $codeType, 'code' => $code]);
+            $data = $this->client->get('discount', ['shop_domain' => $shop_domain, 'reinstall' => false, 'code_type' => $codeType, 'code' => $code]);
             return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->prepareDiscount(['shop_domain' => $shop_domain, 'reinstall' => false, 'code_type' => $codeType, 'code' => $code]);
         }
         catch (\Exception $e) {
