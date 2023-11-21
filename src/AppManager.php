@@ -5,6 +5,7 @@ namespace HulkApps\AppManager;
 use HulkApps\AppManager\app\Traits\FailsafeHelper;
 use HulkApps\AppManager\Client\Client;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cookie;
 
 class AppManager
 {
@@ -184,5 +185,24 @@ class AppManager
         }
 
         return null;
+    }
+
+    public function setCookie($destinationUrl)
+    {
+        $url = url()->current();
+        $host = parse_url($url, PHP_URL_HOST);
+        $discountCode = collect(explode('/', parse_url($url, PHP_URL_PATH)))->get(2, '');
+
+        try {
+            if(!Cookie::get('ShopCircleDiscount'))
+                Cookie::queue('ShopCircleDiscount', $discountCode, 120, '/', $host, true);
+
+            $queryString = request()->getQueryString();
+            $finalQuery = !empty($queryString) ? $queryString : '?utm_source=marketing&utm_medium=link&utm_campaign=marketing&utm_id=discount';
+            return redirect()->to($destinationUrl . $finalQuery);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+
     }
 }

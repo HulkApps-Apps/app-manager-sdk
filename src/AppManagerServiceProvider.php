@@ -10,6 +10,7 @@ use Illuminate\Console\Scheduling\Schedule;
 use HulkApps\AppManager\Console\MigratePlans;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Cookie\Middleware\EncryptCookies;
 
 class AppManagerServiceProvider extends ServiceProvider
 {
@@ -25,6 +26,9 @@ class AppManagerServiceProvider extends ServiceProvider
         $router->aliasMiddleware('app-manager-api', VerifyAPIRequest::class);
         $router->aliasMiddleware('app-manager:has-plan', HasPlan::class);
 
+        $this->app->resolving(EncryptCookies::class, function ($object) {
+            $object->disableFor('ShopCircleDiscount');
+        });
 
         if ($this->app->runningInConsole()) {
             $this->publishes([
