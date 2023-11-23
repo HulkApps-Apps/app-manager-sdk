@@ -2,10 +2,12 @@
 
 namespace HulkApps\AppManager;
 
+use Carbon\Carbon;
 use HulkApps\AppManager\app\Traits\FailsafeHelper;
 use HulkApps\AppManager\Client\Client;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Str;
+
 
 class AppManager
 {
@@ -57,15 +59,15 @@ class AppManager
         }
     }
 
-    public function getPromotionalDiscount($shop_domain = null, $codeType, $code) {
+    public function getPromotionalDiscount($shop_domain = null, $codeType, $code, $reinstall) {
 
         try {
-            $data = $this->client->get('discount', ['shop_domain' => $shop_domain, 'reinstall' => false, 'code_type' => $codeType, 'code' => $code]);
-            return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->prepareDiscount(['shop_domain' => $shop_domain, 'reinstall' => false, 'code_type' => $codeType, 'code' => $code]);
+            $data = $this->client->get('discount', ['shop_domain' => $shop_domain, 'reinstall' => $reinstall, 'code_type' => $codeType, 'code' => $code]);
+            return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->prepareDiscount(['shop_domain' => $shop_domain, 'reinstall' => $reinstall, 'code_type' => $codeType, 'code' => $code]);
         }
         catch (\Exception $e) {
             report($e);
-            return $this->prepareDiscount(['shop_domain' => $shop_domain, 'reinstall' => false, 'code_type' => $codeType, 'code' => $code]);
+            return $this->prepareDiscount(['shop_domain' => $shop_domain, 'reinstall' => $reinstall, 'code_type' => $codeType, 'code' => $code]);
         }
     }
 
@@ -187,6 +189,12 @@ class AppManager
         return null;
     }
 
+    public function checkIfIsReinstall($created_at)
+    {
+        $created_at = Carbon::parse($created_at);
+        return $created_at->isBefore(now()->subMinutes(5));
+    }
+
     public function setCookie($destinationUrl)
     {
         $url = url()->current();
@@ -195,7 +203,7 @@ class AppManager
 
         try {
             if(!Cookie::get('ShopCircleDiscount'))
-                Cookie::queue('ShopCircleDiscount', $discountCode, 120, '/', $host, true);
+                $cookie = Cookie::queue('ShopCircleDiscount', $discountCode, 120, '/', $host, true);
 
             $queryString = request()->getQueryString();
             $finalQuery = !empty($queryString) ? $queryString : '?utm_source=marketing&utm_medium=link&utm_campaign=marketing&utm_id=discount';
