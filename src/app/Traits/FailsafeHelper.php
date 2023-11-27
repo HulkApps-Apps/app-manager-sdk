@@ -2,6 +2,8 @@
 
 namespace HulkApps\AppManager\app\Traits;
 
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -123,16 +125,62 @@ trait FailsafeHelper {
 
     public function prepareDiscount($data) {
         $code =  hex2bin($data['code']);
+        $codeType =  $data['code_type'];
         $reinstall = $data['reinstall'];
         $shopDomain = $data['shop_domain'];
         $now = now();
 
         $discountData = DB::connection('app-manager-failsafe')->table('discounts')
-            ->where('code', $code)
             ->where('enabled', true)
             ->where('valid_from', '<=', $now)
             ->where('valid_to', '>=', $now)
+            ->when(
+                $codeType === 'normal',
+                function (Builder $q) use ($code) {
+                    return $q->where('code', hex2bin($code));
+                },
+                function (Builder $q) {
+                    return $q->whereNull('code');
+                },
+            )
+            ->when(
+                $reinstall === true,
+                function (Builder $q) {
+                    return $q->where('multiple_uses', true);
+                },
+            )
             ->first();
+
+        $discountShop = DB::connection('app-manager-failsafe')->table('discount_shops')
+            ->where('discount_id', $discountData->id)
+            ->where('domain', $shopDomain)
+            ->first();
+
+
+        $discountUsage = DB::connection('app-manager-failsafe')->table('discount_usage_log')
+            ->where('discount_id', $discountData->id)
+            ->where('domain', $shopDomain)
+            ->count();
+
+        if (empty($discountShop)) {
+            $discountData = [];
+        }
+
+        if ($discountData->max_usage !== null
+            && $discountData->max_usage !== 0
+        ) {
+            if ($discountUsage >= $discountData->max_usage) {
+                $discountData = [];
+            }
+        }
+
+        if (
+            $discountData->multiple_uses === false
+            && !empty($discountUsage)
+        ) {
+            $discountData = [];
+        }
+
         $discountData = json_decode(json_encode($discountData), true);
 
         return $this->unSerializeData($discountData);
