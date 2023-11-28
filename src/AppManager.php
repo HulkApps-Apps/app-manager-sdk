@@ -177,6 +177,16 @@ class AppManager
         return $this->client->get('get-status');
     }
 
+    public function discountUsed($shop, $discount_id){
+        try {
+
+            $data = $this->client->post('use-discount', ['shop' => $shop, 'discount_id' => (int) $discount_id]);
+        }
+        catch (\Exception $e) {
+            report($e);
+        }
+    }
+
     public function resolveFromCookies(): ?array
     {
         if (Cookie::has('ShopCircleDiscount') === true) {
