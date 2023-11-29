@@ -199,6 +199,12 @@ class PlanController extends Controller
 
         $promotional_discounts = $this->filterData($data['promotional_discounts'],$commanFields);
         DB::connection('app-manager-failsafe')->table('discounts')->insert($promotional_discounts);
+
+        $promotional_discounts_shops = $data['promotional_discounts_shops'];
+        DB::connection('app-manager-failsafe')->table('discount_shops')->insert($promotional_discounts_shops);
+
+        $promotional_discounts_usage_log = $this->filterData($data['promotional_discounts_usage_log'],$commanFields);
+        DB::connection('app-manager-failsafe')->table('discounts_usage_log')->insert($promotional_discounts_usage_log);
     }
 
     public function filterData($data,$fields = []) {
@@ -212,4 +218,5 @@ class PlanController extends Controller
         })->toArray();
         return $data;
     }
+
 }
