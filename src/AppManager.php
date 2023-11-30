@@ -63,6 +63,8 @@ class AppManager
 
         try {
             $data = $this->client->get('discount', ['shop_domain' => $shop_domain, 'reinstall' => $reinstall, 'code_type' => $codeType, 'code' => $code]);
+            if($data->getStatusCode() === 404)
+                return [];
             return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->prepareDiscount(['shop_domain' => $shop_domain, 'reinstall' => $reinstall, 'code_type' => $codeType, 'code' => $code]);
         }
         catch (\Exception $e) {

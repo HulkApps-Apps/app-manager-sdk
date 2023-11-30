@@ -152,7 +152,8 @@ class ChargeController extends Controller
                 ];
             }
 
-            $requestData = ['shop' => $shop->$storeNameField, 'timestamp' => now()->unix() * 1000, 'plan' => $plan_id, 'promo_discount' => $promotionalDiscount['id']];
+            $promotionalDiscountId = $promotionalDiscount ? $promotionalDiscount['id'] : '';
+            $requestData = ['shop' => $shop->$storeNameField, 'timestamp' => now()->unix() * 1000, 'plan' => $plan_id, 'promo_discount' => $promotionalDiscountId];
 
             $variables = [
                 'name' => $plan['name'],

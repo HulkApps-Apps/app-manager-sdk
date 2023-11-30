@@ -2,12 +2,10 @@
 
 namespace HulkApps\AppManager\app\Traits;
 
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 trait FailsafeHelper {
 
@@ -137,7 +135,7 @@ trait FailsafeHelper {
             ->when(
                 $codeType === 'normal',
                 function (Builder $q) use ($code) {
-                    return $q->where('code', hex2bin($code));
+                    return $q->where('code', $code);
                 },
                 function (Builder $q) {
                     return $q->whereNull('code');
@@ -157,7 +155,7 @@ trait FailsafeHelper {
             ->first();
 
 
-        $discountUsage = DB::connection('app-manager-failsafe')->table('discount_usage_log')
+        $discountUsage = DB::connection('app-manager-failsafe')->table('discounts_usage_log')
             ->where('discount_id', $discountData->id)
             ->where('domain', $shopDomain)
             ->count();
