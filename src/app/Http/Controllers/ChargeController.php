@@ -135,12 +135,12 @@ class ChargeController extends Controller
             if($plan['discount']){
                 $discount_type = $plan['discount_type'] ?? "percentage";
 
-                $discount = $plan['discount'] ? [
+                $discount = [
                     'value' => [
                         $discount_type => $discount_type === "percentage" ? (float)$plan['discount'] / 100 : $plan['discount'],
                     ],
                     'durationLimitInIntervals' => ((int)$plan['cycle_count'] ?? 0)
-                ] : [];
+                ];
             }elseif ($promotionalDiscount){
                 $discount_type = $promotionalDiscount['type'] ?? "percentage";
 
@@ -152,7 +152,7 @@ class ChargeController extends Controller
                 ];
             }
 
-            $promotionalDiscountId = $promotionalDiscount ? $promotionalDiscount['id'] : '';
+            $promotionalDiscountId = $promotionalDiscount ? $promotionalDiscount['id'] : 0;
             $requestData = ['shop' => $shop->$storeNameField, 'timestamp' => now()->unix() * 1000, 'plan' => $plan_id, 'promo_discount' => $promotionalDiscountId];
 
             $variables = [
@@ -168,12 +168,6 @@ class ChargeController extends Controller
                                     'amount' => $plan['price'],
                                     'currencyCode' => 'USD',
                                 ],
-//                                'discount' => $plan['discount'] ? [
-//                                    'value' => [
-//                                        $discount_type => $discount_type === "percentage" ? (float)$plan['discount'] / 100 : $plan['discount'],
-//                                    ],
-//                                    'durationLimitInIntervals' => ((int)$plan['cycle_count'] ?? 0)
-//                                ] : [],
                                 'discount' => $discount,
                                 'interval' => $plan['interval']['value'],
                             ]),
@@ -260,11 +254,10 @@ class ChargeController extends Controller
                 DB::table($tableName)->where($storeName, $request->shop)->update($userUpdateInfo);
                 $chargeData = \AppManager::getCharge($shop->$storeName);
 
-                if(!empty($request->promo_discount))
-                    $discountApplied = \AppManager::discountUsed($shop, $request->promo_discount);
-
                 try {
                     event(new PlanActivated($plan, $charge, $chargeData['cancelled_charge'] ?? null));
+                    if(!empty($request->promo_discount))
+                        $discountApplied = \AppManager::discountUsed($shop, $request->promo_discount);
                 } catch (\Exception $exception) {
                     report($exception);
                 }
