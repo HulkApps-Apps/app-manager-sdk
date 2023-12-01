@@ -132,15 +132,7 @@ trait FailsafeHelper {
             ->where('enabled', true)
             ->where('valid_from', '<=', $now)
             ->where('valid_to', '>=', $now)
-            ->when(
-                $codeType === 'normal',
-                function (Builder $q) use ($code) {
-                    return $q->where('code', $code);
-                },
-                function (Builder $q) {
-                    return $q->whereNull('code');
-                },
-            )
+            ->where('code', $code)
             ->when(
                 $reinstall === true,
                 function (Builder $q) {
@@ -161,14 +153,14 @@ trait FailsafeHelper {
             ->count();
 
         if (empty($discountShop)) {
-            $discountData = [];
+            return [];
         }
 
         if ($discountData->max_usage !== null
             && $discountData->max_usage !== 0
         ) {
             if ($discountUsage >= $discountData->max_usage) {
-                $discountData = [];
+                return [];
             }
         }
 
@@ -176,7 +168,7 @@ trait FailsafeHelper {
             $discountData->multiple_uses === false
             && !empty($discountUsage)
         ) {
-            $discountData = [];
+            return [];
         }
 
         $discountData = json_decode(json_encode($discountData), true);
