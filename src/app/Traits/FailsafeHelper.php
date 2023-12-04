@@ -141,34 +141,36 @@ trait FailsafeHelper {
             )
             ->first();
 
-        $discountShop = DB::connection('app-manager-failsafe')->table('discount_shops')
-            ->where('discount_id', $discountData->id)
-            ->where('domain', $shopDomain)
-            ->first();
+        if(!empty($discountData)){
+            $discountShop = DB::connection('app-manager-failsafe')->table('discount_shops')
+                ->where('discount_id', $discountData->id)
+                ->where('domain', $shopDomain)
+                ->first();
 
 
-        $discountUsage = DB::connection('app-manager-failsafe')->table('discounts_usage_log')
-            ->where('discount_id', $discountData->id)
-            ->where('domain', $shopDomain)
-            ->count();
+            $discountUsage = DB::connection('app-manager-failsafe')->table('discounts_usage_log')
+                ->where('discount_id', $discountData->id)
+                ->where('domain', $shopDomain)
+                ->count();
 
-        if (empty($discountShop)) {
-            return [];
-        }
-
-        if ($discountData->max_usage !== null
-            && $discountData->max_usage !== 0
-        ) {
-            if ($discountUsage >= $discountData->max_usage) {
+            if (empty($discountShop)) {
                 return [];
             }
-        }
 
-        if (
-            $discountData->multiple_uses === false
-            && !empty($discountUsage)
-        ) {
-            return [];
+            if ($discountData->max_usage !== null
+                && $discountData->max_usage !== 0
+            ) {
+                if ($discountUsage >= $discountData->max_usage) {
+                    return [];
+                }
+            }
+
+            if (
+                $discountData->multiple_uses === false
+                && !empty($discountUsage)
+            ) {
+                return [];
+            }
         }
 
         $discountData = json_decode(json_encode($discountData), true);
@@ -258,6 +260,15 @@ trait FailsafeHelper {
         return ['message' => $charge ? 'success' : 'fail'];
     }
 
+    public function storePromotionalDiscountHelper($shop, $discount_id){
+        $data['discount_id'] = $discount_id;
+        $data['domain'] = $shop;
+        $data['sync'] = false;
+        $data['process_type'] = 'use-discount';
+        $discountUsageLog = DB::connection('app-manager-failsafe')->table('discounts_usage_log')->insert($data);
+        return ['message' => $discountUsageLog ? 'success' : 'fail'];
+    }
+
     public function syncAppManager()
     {
         $status = false;
@@ -280,6 +291,9 @@ trait FailsafeHelper {
                 $charges = DB::connection('app-manager-failsafe')->table('charges')
                     ->where('sync', 0)->where('process_type', 'store-charge')->get()->toArray();
 
+                $discountsUsageLog = DB::connection('app-manager-failsafe')->table('discounts_usage_log')
+                    ->where('sync', 0)->where('process_type', 'use-discount')->get()->toArray();
+
                 if ($charges) {
                     foreach ($charges as $charge) {
                         $charge = json_decode(json_encode($charge), true);
@@ -291,6 +305,21 @@ trait FailsafeHelper {
                                     'sync' => 1,
                                     'process_type' => null
                                 ]);
+                        }
+                    }
+
+                    if ($discountsUsageLog) {
+                        foreach ($discountsUsageLog as $discountUsageLog) {
+                            $discountUsageLog = json_decode(json_encode($discountUsageLog), true);
+
+                            $response = \AppManager::syncDiscountUsageLog($discountUsageLog);
+                            if ($response) {
+                                DB::connection('app-manager-failsafe')->table('discounts_usage_log')
+                                    ->where('id', $discountUsageLog['id'])->update([
+                                        'sync' => 1,
+                                        'process_type' => null
+                                    ]);
+                            }
                         }
                     }
                 }

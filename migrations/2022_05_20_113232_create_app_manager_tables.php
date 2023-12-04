@@ -128,6 +128,8 @@ class CreateAppManagerTables extends Migration
             $table->unsignedBigInteger('discount_id')->index();
             $table->unsignedBigInteger('app_id')->index();
             $table->string('domain')->index();
+            $table->boolean('sync')->default(true);
+            $table->string('process_type')->nullable();
             $table->timestamps();
         });
     }

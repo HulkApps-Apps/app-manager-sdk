@@ -119,6 +119,12 @@ class AppManager
         return $data->json();
     }
 
+    public function syncDiscountUsageLog($payload) {
+
+        $data = $this->client->post('use-discount', $payload);
+        return $data->json();
+    }
+
     public function getRemainingDays($shop_domain, $trial_activated_at = null ,$plan_id = null) {
 
         try {
@@ -181,11 +187,12 @@ class AppManager
 
     public function discountUsed($shop, $discount_id){
         try {
-
             $data = $this->client->post('use-discount', ['shop' => $shop, 'discount_id' => (int) $discount_id]);
+            return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->storePromotionalDiscountHelper($shop->shop_domain, $discount_id);
         }
         catch (\Exception $e) {
             report($e);
+            return $this->storePromotionalDiscountHelper($shop->shop_domain, $discount_id);
         }
     }
 
