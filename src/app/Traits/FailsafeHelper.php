@@ -2,6 +2,7 @@
 
 namespace HulkApps\AppManager\app\Traits;
 
+use App\Models\Shop;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
@@ -275,7 +276,8 @@ trait FailsafeHelper {
         try {
             $status = DB::connection('app-manager-failsafe')->getPdo() &&
                 DB::connection('app-manager-failsafe')->getDatabaseName() &&
-                \Schema::connection('app-manager-failsafe')->hasTable('charges');
+                \Schema::connection('app-manager-failsafe')->hasTable('charges') &&
+                \Schema::connection('app-manager-failsafe')->hasTable('discounts_usage_log');
         }
         catch (\Exception $extends){
             $status = false;
@@ -312,7 +314,9 @@ trait FailsafeHelper {
                         foreach ($discountsUsageLog as $discountUsageLog) {
                             $discountUsageLog = json_decode(json_encode($discountUsageLog), true);
 
-                            $response = \AppManager::syncDiscountUsageLog($discountUsageLog);
+                            $shop = Shop::where('shop_domain', $discountUsageLog['domain'])->first();
+                            $response = \AppManager::syncDiscountUsageLog(['shop' => $shop, 'discount_id' => (int) $discountUsageLog['discount_id']]);
+
                             if ($response) {
                                 DB::connection('app-manager-failsafe')->table('discounts_usage_log')
                                     ->where('id', $discountUsageLog['id'])->update([

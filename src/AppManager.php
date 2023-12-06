@@ -121,7 +121,7 @@ class AppManager
 
     public function syncDiscountUsageLog($payload) {
 
-        $data = $this->client->post('use-discount', $payload);
+        $data = $this->client->post('use-discount-sync', $payload);
         return $data->json();
     }
 
