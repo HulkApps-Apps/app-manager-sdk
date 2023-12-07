@@ -142,37 +142,40 @@ trait FailsafeHelper {
             )
             ->first();
 
-        if(!empty($discountData)){
-            $discountShop = DB::connection('app-manager-failsafe')->table('discount_shops')
-                ->where('discount_id', $discountData->id)
-                ->where('domain', $shopDomain)
-                ->first();
+        if (empty($discountData)) {
+            return [];
+        }
+
+        $discountShop = DB::connection('app-manager-failsafe')->table('discount_shops')
+            ->where('discount_id', $discountData->id)
+            ->where('domain', $shopDomain)
+            ->first();
 
 
-            $discountUsage = DB::connection('app-manager-failsafe')->table('discounts_usage_log')
-                ->where('discount_id', $discountData->id)
-                ->where('domain', $shopDomain)
-                ->count();
+        $discountUsage = DB::connection('app-manager-failsafe')->table('discounts_usage_log')
+            ->where('discount_id', $discountData->id)
+            ->where('domain', $shopDomain)
+            ->count();
 
-            if (empty($discountShop)) {
-                return [];
-            }
+        if (empty($discountShop)) {
+            return [];
+        }
 
-            if ($discountData->max_usage !== null
-                && $discountData->max_usage !== 0
-            ) {
-                if ($discountUsage >= $discountData->max_usage) {
-                    return [];
-                }
-            }
-
-            if (
-                $discountData->multiple_uses === false
-                && !empty($discountUsage)
-            ) {
+        if ($discountData->max_usage !== null
+            && $discountData->max_usage !== 0
+        ) {
+            if ($discountUsage >= $discountData->max_usage) {
                 return [];
             }
         }
+
+        if (
+            $discountData->multiple_uses === false
+            && !empty($discountUsage)
+        ) {
+            return [];
+        }
+
 
         $discountData = json_decode(json_encode($discountData), true);
 
