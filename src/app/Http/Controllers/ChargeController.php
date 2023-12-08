@@ -90,10 +90,6 @@ class ChargeController extends Controller
 
             $trialDays = $plan['trial_days'] ?? 0;
 
-            //add host
-            if($request->has('host') && !empty($request->host)){
-                $requestData['host'] = $request->host;
-            }
             if (!empty($shop->$storePlanField) && $trialDays) {
 
                 $remaining = \AppManager::getRemainingDays($shop->$storeNameField, $shop->$storeTrialActivatedAtField, $shop->$storePlanField);
@@ -154,6 +150,11 @@ class ChargeController extends Controller
 
             $promotionalDiscountId = $promotionalDiscount ? $promotionalDiscount['id'] : 0;
             $requestData = ['shop' => $shop->$storeNameField, 'timestamp' => now()->unix() * 1000, 'plan' => $plan_id, 'promo_discount' => $promotionalDiscountId];
+
+            //add host
+            if($request->has('host') && !empty($request->host)){
+                $requestData['host'] = $request->host;
+            }
 
             $variables = [
                 'name' => $plan['name'],

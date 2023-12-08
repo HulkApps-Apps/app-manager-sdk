@@ -34,7 +34,7 @@ class PlanController extends Controller
 
             if ($request->has('shop_domain')) {
                 $shopDomain = $request->get('shop_domain');
-                $userData = DB::table($shopTableName)->where($storeFieldName, $shopDomain)->first();
+                $userData = DB::table($shopTableName)->where($storeFieldName, $shopDomain)->get();
                 $shopify_plan = collect($userData)->pluck($shopifyPlanFieldName)->first();
                 $activePlanId = collect($userData)->pluck($planFieldName)->first() ?? null;
                 $plans = \AppManager::getPlans($shopDomain, $activePlanId);
@@ -70,7 +70,7 @@ class PlanController extends Controller
             if ($discountCookie !== null) {
                 $codeType = $discountCookie['codeType'];
                 $code = $discountCookie['code'];
-                $reinstall = \AppManager::checkIfIsReinstall($userData->created_at);
+                $reinstall = \AppManager::checkIfIsReinstall(collect($userData)->pluck('created_at')->first());
                 $promotionalDiscount = \AppManager::getPromotionalDiscount($shopDomain, $codeType, $code, $reinstall);
             }
 
