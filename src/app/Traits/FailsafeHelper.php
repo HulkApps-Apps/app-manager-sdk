@@ -2,7 +2,6 @@
 
 namespace HulkApps\AppManager\app\Traits;
 
-use App\Models\Shop;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
