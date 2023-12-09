@@ -64,8 +64,19 @@ class PlanController extends Controller
                 }
             }
 
+            $promotionalDiscount=[];
+            $discountCookie = \AppManager::resolveFromCookies();
+
+            if ($discountCookie !== null) {
+                $codeType = $discountCookie['codeType'];
+                $code = $discountCookie['code'];
+                $reinstall = \AppManager::checkIfIsReinstall(collect($userData)->pluck('created_at')->first());
+                $promotionalDiscount = \AppManager::getPromotionalDiscount($shopDomain, $codeType, $code, $reinstall);
+            }
+
             return [
                 'plans' => $plans,
+                'promotional_discount' => $promotionalDiscount,
                 'shopify_plan' => $shopify_plan,
                 'plan' => $plan,
                 'default_plan_id' => $defaultPlanId,
@@ -185,6 +196,15 @@ class PlanController extends Controller
 
         $plan_users = $this->filterData($data['plan_users'],$commanFields);
         DB::connection('app-manager-failsafe')->table('plan_user')->insert($plan_users);
+
+        $promotional_discounts = $this->filterData($data['promotional_discounts'],$commanFields);
+        DB::connection('app-manager-failsafe')->table('discounts')->insert($promotional_discounts);
+
+        $promotional_discounts_shops = $data['promotional_discounts_shops'];
+        DB::connection('app-manager-failsafe')->table('discount_shops')->insert($promotional_discounts_shops);
+
+        $promotional_discounts_usage_log = $this->filterData($data['promotional_discounts_usage_log'],$commanFields);
+        DB::connection('app-manager-failsafe')->table('discounts_usage_log')->insert($promotional_discounts_usage_log);
     }
 
     public function filterData($data,$fields = []) {
@@ -198,4 +218,5 @@ class PlanController extends Controller
         })->toArray();
         return $data;
     }
+
 }

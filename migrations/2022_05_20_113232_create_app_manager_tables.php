@@ -99,6 +99,39 @@ class CreateAppManagerTables extends Migration
             $table->string('shop_domain');
             $table->timestamps();
         });
+
+        Schema::create('discounts', function (Blueprint $table) {
+            $table->id();
+            $table->string('name')->index();
+            $table->string('code')->nullable();
+            $table->string('type')->default('amount'); // amount, percentage
+            $table->decimal('value')->default(0);
+            $table->unsignedSmallInteger('duration_intervals')->nullable();
+            $table->unsignedInteger('max_usage')->nullable();
+            $table->boolean('enabled')->default(true);
+            $table->dateTime('valid_from')->nullable();
+            $table->dateTime('valid_to')->nullable();
+            $table->unsignedSmallInteger('priority')->default(0);
+            $table->boolean('multiple_uses')->default(true);
+            $table->boolean('multiple_apps')->default(true);
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
+        Schema::create('discount_shops', function (Blueprint $table) {
+            $table->unsignedBigInteger('discount_id')->index();
+            $table->string('domain')->index();
+        });
+
+        Schema::create('discounts_usage_log', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('discount_id')->index();
+            $table->unsignedBigInteger('app_id')->index();
+            $table->string('domain')->index();
+            $table->boolean('sync')->default(true);
+            $table->string('process_type')->nullable();
+            $table->timestamps();
+        });
     }
 
 	/**
@@ -114,5 +147,8 @@ class CreateAppManagerTables extends Migration
 		Schema::dropIfExists('discount_plan');
 		Schema::dropIfExists('trial_extension');
 		Schema::dropIfExists('plan_user');
+		Schema::dropIfExists('discounts');
+		Schema::dropIfExists('discount_shops');
+		Schema::dropIfExists('discounts_usage_log');
 	}
 }

@@ -2,10 +2,10 @@
 
 namespace HulkApps\AppManager\app\Traits;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 trait FailsafeHelper {
 
@@ -121,6 +121,66 @@ trait FailsafeHelper {
         return $this->unSerializeData($planData);
     }
 
+    public function prepareDiscount($data) {
+        $code =  hex2bin($data['code']);
+        $codeType =  $data['code_type'];
+        $reinstall = $data['reinstall'];
+        $shopDomain = $data['shop_domain'];
+        $now = now();
+
+        $discountData = DB::connection('app-manager-failsafe')->table('discounts')
+            ->where('enabled', true)
+            ->where('valid_from', '<=', $now)
+            ->where('valid_to', '>=', $now)
+            ->where('code', $code)
+            ->when(
+                $reinstall === true,
+                function (Builder $q) {
+                    return $q->where('multiple_uses', true);
+                },
+            )
+            ->first();
+
+        if (empty($discountData)) {
+            return [];
+        }
+
+        $discountShop = DB::connection('app-manager-failsafe')->table('discount_shops')
+            ->where('discount_id', $discountData->id)
+            ->where('domain', $shopDomain)
+            ->first();
+
+
+        $discountUsage = DB::connection('app-manager-failsafe')->table('discounts_usage_log')
+            ->where('discount_id', $discountData->id)
+            ->where('domain', $shopDomain)
+            ->count();
+
+        if (empty($discountShop)) {
+            return [];
+        }
+
+        if ($discountData->max_usage !== null
+            && $discountData->max_usage !== 0
+        ) {
+            if ($discountUsage >= $discountData->max_usage) {
+                return [];
+            }
+        }
+
+        if (
+            $discountData->multiple_uses === false
+            && !empty($discountUsage)
+        ) {
+            return [];
+        }
+
+
+        $discountData = json_decode(json_encode($discountData), true);
+
+        return $this->unSerializeData($discountData);
+    }
+
     public function prepareRemainingDays($data) {
         $trialActivatedAt = $data['trial_activated_at'];
         $planId = $data['plan_id'];
@@ -203,13 +263,23 @@ trait FailsafeHelper {
         return ['message' => $charge ? 'success' : 'fail'];
     }
 
+    public function storePromotionalDiscountHelper($shop, $discount_id){
+        $data['discount_id'] = $discount_id;
+        $data['domain'] = $shop;
+        $data['sync'] = false;
+        $data['process_type'] = 'use-discount';
+        $discountUsageLog = DB::connection('app-manager-failsafe')->table('discounts_usage_log')->insert($data);
+        return ['message' => $discountUsageLog ? 'success' : 'fail'];
+    }
+
     public function syncAppManager()
     {
         $status = false;
         try {
             $status = DB::connection('app-manager-failsafe')->getPdo() &&
                 DB::connection('app-manager-failsafe')->getDatabaseName() &&
-                \Schema::connection('app-manager-failsafe')->hasTable('charges');
+                \Schema::connection('app-manager-failsafe')->hasTable('charges') &&
+                \Schema::connection('app-manager-failsafe')->hasTable('discounts_usage_log');
         }
         catch (\Exception $extends){
             $status = false;
@@ -225,6 +295,9 @@ trait FailsafeHelper {
                 $charges = DB::connection('app-manager-failsafe')->table('charges')
                     ->where('sync', 0)->where('process_type', 'store-charge')->get()->toArray();
 
+                $discountsUsageLog = DB::connection('app-manager-failsafe')->table('discounts_usage_log')
+                    ->where('sync', 0)->where('process_type', 'use-discount')->get()->toArray();
+
                 if ($charges) {
                     foreach ($charges as $charge) {
                         $charge = json_decode(json_encode($charge), true);
@@ -236,6 +309,22 @@ trait FailsafeHelper {
                                     'sync' => 1,
                                     'process_type' => null
                                 ]);
+                        }
+                    }
+
+                    if ($discountsUsageLog) {
+                        foreach ($discountsUsageLog as $discountUsageLog) {
+                            $discountUsageLog = json_decode(json_encode($discountUsageLog), true);
+
+                            $response = \AppManager::syncDiscountUsageLog(['shop' => ['shop_domain' => $discountUsageLog['domain']], 'discount_id' => (int) $discountUsageLog['discount_id']]);
+
+                            if ($response) {
+                                DB::connection('app-manager-failsafe')->table('discounts_usage_log')
+                                    ->where('id', $discountUsageLog['id'])->update([
+                                        'sync' => 1,
+                                        'process_type' => null
+                                    ]);
+                            }
                         }
                     }
                 }
