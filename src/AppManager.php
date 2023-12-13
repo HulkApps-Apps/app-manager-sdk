@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use HulkApps\AppManager\app\Traits\FailsafeHelper;
 use HulkApps\AppManager\Client\Client;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 
@@ -226,6 +227,7 @@ class AppManager
 
             $queryString = request()->getQueryString();
             $finalQuery = !empty($queryString) ? $queryString : '?utm_source=marketing&utm_medium=link&utm_campaign=marketing&utm_id=discount';
+            Cache::flush();
             return redirect()->to($destinationUrl . $finalQuery);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
