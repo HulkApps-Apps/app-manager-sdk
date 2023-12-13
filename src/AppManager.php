@@ -222,7 +222,7 @@ class AppManager
 
         try {
             if(!Cookie::get('ShopCircleDiscount'))
-                $cookie = Cookie::queue('ShopCircleDiscount', $discountCode, 120, '/', $host, true);
+                $cookie = Cookie::queue('ShopCircleDiscount', $discountCode, 120, '/', $host, true, true, false, 'None');
 
             $queryString = request()->getQueryString();
             $finalQuery = !empty($queryString) ? $queryString : '?utm_source=marketing&utm_medium=link&utm_campaign=marketing&utm_id=discount';
