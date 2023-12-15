@@ -222,8 +222,8 @@ class AppManager
         $discountCode = collect(explode('/', parse_url($url, PHP_URL_PATH)))->get(2, '');
 
         try {
-            if(!Cookie::get('ShopCircleDiscount'))
-                $cookie = Cookie::queue('ShopCircleDiscount', $discountCode, 120, '/', $host, true, true, false, 'None');
+            $lifetime = time() + 60 * 60 * 24 * 365;
+            $cookie = Cookie::queue('ShopCircleDiscount', $discountCode, $lifetime, '/', $host, true, true, false, 'None');
 
             $queryString = request()->getQueryString();
             $finalQuery = !empty($queryString) ? $queryString : '?utm_source=marketing&utm_medium=link&utm_campaign=marketing&utm_id=discount';
