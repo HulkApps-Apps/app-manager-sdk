@@ -197,6 +197,25 @@ class AppManager
         }
     }
 
+    public function setCookie($destinationUrl)
+    {
+        $url = url()->current();
+        $host = parse_url($url, PHP_URL_HOST);
+        $discountCode = collect(explode('/', parse_url($url, PHP_URL_PATH)))->get(2, '');
+
+        try {
+            $lifetime = time() + 60 * 60 * 24 * 365;
+            Cookie::queue('ShopCircleDiscount', $discountCode, $lifetime, '/', $host, true, true, false, 'None');
+            $queryString = request()->getQueryString();
+            $finalQuery = !empty($queryString) ? $queryString : '?utm_source=marketing&utm_medium=link&utm_campaign=marketing&utm_id=discount';
+            Cache::flush();
+            return redirect()->to($destinationUrl . $finalQuery);
+        }catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+
+    }
+
     public function resolveFromCookies(): ?array
     {
         if (Cookie::has('ShopCircleDiscount') === true) {
@@ -209,29 +228,10 @@ class AppManager
         return null;
     }
 
-    public function checkIfIsReinstall($created_at)
+    public function checkIfIsReinstall($created_at): bool
     {
         $created_at = Carbon::parse($created_at);
         return $created_at->isBefore(now()->subMinutes(5));
     }
 
-    public function setCookie($destinationUrl)
-    {
-        $url = url()->current();
-        $host = parse_url($url, PHP_URL_HOST);
-        $discountCode = collect(explode('/', parse_url($url, PHP_URL_PATH)))->get(2, '');
-
-        try {
-            $lifetime = time() + 60 * 60 * 24 * 365;
-            $cookie = Cookie::queue('ShopCircleDiscount', $discountCode, $lifetime, '/', $host, true, true, false, 'None');
-
-            $queryString = request()->getQueryString();
-            $finalQuery = !empty($queryString) ? $queryString : '?utm_source=marketing&utm_medium=link&utm_campaign=marketing&utm_id=discount';
-            Cache::flush();
-            return redirect()->to($destinationUrl . $finalQuery);
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
-
-    }
 }
