@@ -122,6 +122,18 @@ class ChargeController extends Controller
                 $test = in_array($shopifyPlan, array_column($plan['affiliate'], 'value')) ? true : null;
             }
 
+            $planDiscount = [];
+            if (!empty($plan['discount'])) {
+                $planDiscount = [
+                    'value' => [
+                        $discount_type => $discount_type === "percentage" ? (float)$plan['discount'] / 100 : $plan['discount'],
+                    ]
+                ];
+                if((int)$plan['cycle_count']){
+                    $planDiscount['durationLimitInIntervals'] = (int)$plan['cycle_count'];
+                }
+            }
+
             $variables = [
                 'name' => $plan['name'],
                 'returnUrl' => route('app-manager.plan.callback')."?".http_build_query($requestData, '', '&', PHP_QUERY_RFC3986),
@@ -135,12 +147,7 @@ class ChargeController extends Controller
                                     'amount' => $plan['price'],
                                     'currencyCode' => 'USD',
                                 ],
-                                'discount' => $plan['discount'] ? [
-                                    'value' => [
-                                        $discount_type => $discount_type === "percentage" ? (float)$plan['discount'] / 100 : $plan['discount'],
-                                    ],
-                                    'durationLimitInIntervals' => ((int)$plan['cycle_count'] ?? 0)
-                                ] : [],
+                                'discount' => $planDiscount,
                                 'interval' => $plan['interval']['value'],
                             ]),
                         ],
