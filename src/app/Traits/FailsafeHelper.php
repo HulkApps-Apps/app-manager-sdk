@@ -147,16 +147,25 @@ trait FailsafeHelper {
 
         $discountShop = DB::connection('app-manager-failsafe')->table('discount_shops')
             ->where('discount_id', $discountData->id)
-            ->where('domain', $shopDomain)
             ->first();
 
+        $discountPlan = DB::connection('app-manager-failsafe')->table('discount_plans')
+            ->where('discount_id', $discountData->id)
+            ->get()->pluck('plan_id')->toArray();
 
         $discountUsage = DB::connection('app-manager-failsafe')->table('discounts_usage_log')
             ->where('discount_id', $discountData->id)
             ->where('domain', $shopDomain)
             ->count();
 
-        if (empty($discountShop)) {
+        if (!empty($discountShop)) {
+            $discountShopSpecific = DB::connection('app-manager-failsafe')->table('discount_shops')
+                ->where('discount_id', $discountData->id)
+                ->where('domain', $shopDomain)
+                ->first();
+            if(empty($discountShopSpecific)){
+                return [];
+            }
             return [];
         }
 
@@ -175,9 +184,8 @@ trait FailsafeHelper {
             return [];
         }
 
-
         $discountData = json_decode(json_encode($discountData), true);
-
+        $discountData['plan_relation'] = $discountPlan;
         return $this->unSerializeData($discountData);
     }
 
