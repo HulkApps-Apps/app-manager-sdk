@@ -201,6 +201,9 @@ class PlanController extends Controller
         $promotional_discounts_shops = $data['promotional_discounts_shops'];
         DB::connection('app-manager-failsafe')->table('discount_shops')->insert($promotional_discounts_shops);
 
+        $promotional_discounts_plans = $data['promotional_discounts_plans'];
+        DB::connection('app-manager-failsafe')->table('discount_plans')->insert($promotional_discounts_plans);
+
         $promotional_discounts_usage_log = $data['promotional_discounts_usage_log'];
         DB::connection('app-manager-failsafe')->table('discounts_usage_log')->insert($promotional_discounts_usage_log);
     }
