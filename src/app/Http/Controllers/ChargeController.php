@@ -135,8 +135,10 @@ class ChargeController extends Controller
                     'value' => [
                         $discount_type => $discount_type === "percentage" ? (float)$plan['discount'] / 100 : $plan['discount'],
                     ],
-                    'durationLimitInIntervals' => ((int)$plan['cycle_count'] ?? 0)
                 ];
+                if((int)$plan['cycle_count']){
+                    $discount['durationLimitInIntervals'] = (int)$plan['cycle_count'];
+                }
             }elseif ($promotionalDiscount){
                 if($promotionalDiscount['plan_relation'] && !in_array($plan['id'], $promotionalDiscount['plan_relation'])){
                     $discount = [];
@@ -148,8 +150,10 @@ class ChargeController extends Controller
                         'value' => [
                             $discount_type => $discount_type === "percentage" ? (float)$promotionalDiscount['value'] / 100 : $promotionalDiscount['value'],
                         ],
-                        'durationLimitInIntervals' => ((int)$promotionalDiscount['duration_intervals'] ?? 0)
                     ];
+                    if((int)$promotionalDiscount['duration_intervals']){
+                        $discount['durationLimitInIntervals'] = (int)$promotionalDiscount['duration_intervals'];
+                    }
                 }
             }
 
