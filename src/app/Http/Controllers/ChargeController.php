@@ -135,8 +135,10 @@ class ChargeController extends Controller
                     'value' => [
                         $discount_type => $discount_type === "percentage" ? (float)$plan['discount'] / 100 : $plan['discount'],
                     ],
-                    'durationLimitInIntervals' => ((int)$plan['cycle_count'] ?? 0)
                 ];
+                if((int)$plan['cycle_count']){
+                    $discount['durationLimitInIntervals'] = (int)$plan['cycle_count'];
+                }
             }elseif ($promotionalDiscount){
                 if($promotionalDiscount['plan_relation'] && !in_array($plan['id'], $promotionalDiscount['plan_relation'])){
                     $discount = [];
@@ -148,13 +150,16 @@ class ChargeController extends Controller
                         'value' => [
                             $discount_type => $discount_type === "percentage" ? (float)$promotionalDiscount['value'] / 100 : $promotionalDiscount['value'],
                         ],
-                        'durationLimitInIntervals' => ((int)$promotionalDiscount['duration_intervals'] ?? 0)
                     ];
+                    if((int)$promotionalDiscount['duration_intervals']){
+                        $discount['durationLimitInIntervals'] = (int)$promotionalDiscount['duration_intervals'];
+                    }
                 }
             }
 
             $promotionalDiscountId = $plan['discount'] && $promotionalDiscount ? 0 : ($promotionalDiscount ? $promotionalDiscount['id'] : 0);
-            $requestData = ['shop' => $shop->$storeNameField, 'timestamp' => now()->unix() * 1000, 'plan' => $plan_id, 'promo_discount' => $promotionalDiscountId];
+            $plansRelation = $promotionalDiscount && $promotionalDiscount['plan_relation'] ? $promotionalDiscount['plan_relation'] : [];
+            $requestData = ['shop' => $shop->$storeNameField, 'timestamp' => now()->unix() * 1000, 'plan' => $plan_id, 'promo_discount' => $promotionalDiscountId, 'discounted_plans' => $plansRelation];
 
             //add host
             if($request->has('host') && !empty($request->host)){
@@ -262,7 +267,7 @@ class ChargeController extends Controller
 
                 try {
                     event(new PlanActivated($plan, $charge, $chargeData['cancelled_charge'] ?? null));
-                    if(!empty($request->promo_discount))
+                    if(!empty($request->promo_discount) && in_array($request->plan, $request->discounted_plans))
                         $discountApplied = \AppManager::discountUsed($shop, $request->promo_discount);
                 } catch (\Exception $exception) {
                     report($exception);
