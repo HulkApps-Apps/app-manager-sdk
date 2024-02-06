@@ -124,7 +124,7 @@ class ChargeController extends Controller
                 $codeType = $discountCookie['codeType'];
                 $code = $discountCookie['code'];
                 $reinstall = \AppManager::checkIfIsReinstall($shop->created_at);
-                $promotionalDiscount = \AppManager::getPromotionalDiscount($shop->shop_domain, $codeType, $code, $reinstall);
+                $promotionalDiscount = \AppManager::getPromotionalDiscount($request->shop, $codeType, $code, $reinstall);
             }
 
             $discount = [];
@@ -267,7 +267,9 @@ class ChargeController extends Controller
 
                 try {
                     event(new PlanActivated($plan, $charge, $chargeData['cancelled_charge'] ?? null));
-                    if(!empty($request->promo_discount) && in_array($request->plan, $request->discounted_plans))
+                    if(!empty($request->promo_discount) && !empty($request->discounted_plans) && in_array($request->plan, $request->discounted_plans)){
+                        $discountApplied = \AppManager::discountUsed($shop, $request->promo_discount);
+                    }elseif (!empty($request->promo_discount) && empty($request->discounted_plans))
                         $discountApplied = \AppManager::discountUsed($shop, $request->promo_discount);
                 } catch (\Exception $exception) {
                     report($exception);
