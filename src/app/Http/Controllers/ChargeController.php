@@ -268,9 +268,9 @@ class ChargeController extends Controller
                 try {
                     event(new PlanActivated($plan, $charge, $chargeData['cancelled_charge'] ?? null));
                     if(!empty($request->promo_discount) && !empty($request->discounted_plans) && in_array($request->plan, $request->discounted_plans)){
-                        $discountApplied = \AppManager::discountUsed($shop, $request->promo_discount);
+                        $discountApplied = \AppManager::discountUsed($shop->$storeName, $request->promo_discount);
                     }elseif (!empty($request->promo_discount) && empty($request->discounted_plans))
-                        $discountApplied = \AppManager::discountUsed($shop, $request->promo_discount);
+                        $discountApplied = \AppManager::discountUsed($shop->$storeName, $request->promo_discount);
                 } catch (\Exception $exception) {
                     report($exception);
                 }
