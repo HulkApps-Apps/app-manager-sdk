@@ -186,14 +186,14 @@ class AppManager
         return $this->client->get('get-status');
     }
 
-    public function discountUsed($storeName, $discount_id){
+    public function discountUsed($shop_domain, $discount_id){
         try {
-            $data = $this->client->post('use-discount', ['shop_domain' => $storeName, 'discount_id' => (int) $discount_id]);
-            return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->storePromotionalDiscountHelper($storeName, $discount_id);
+            $data = $this->client->post('use-discount', ['shop_domain' => $shop_domain, 'discount_id' => (int) $discount_id]);
+            return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->storePromotionalDiscountHelper($shop_domain, $discount_id);
         }
         catch (\Exception $e) {
             report($e);
-            return $this->storePromotionalDiscountHelper($storeName, $discount_id);
+            return $this->storePromotionalDiscountHelper($shop_domain, $discount_id);
         }
     }
 
