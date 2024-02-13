@@ -323,7 +323,7 @@ trait FailsafeHelper {
                         foreach ($discountsUsageLog as $discountUsageLog) {
                             $discountUsageLog = json_decode(json_encode($discountUsageLog), true);
 
-                            $response = \AppManager::syncDiscountUsageLog(['shop' => ['shop_domain' => $discountUsageLog['domain']], 'discount_id' => (int) $discountUsageLog['discount_id']]);
+                            $response = \AppManager::syncDiscountUsageLog(['shop_domain' => $discountUsageLog['domain'], 'discount_id' => (int) $discountUsageLog['discount_id']]);
 
                             if ($response) {
                                 DB::connection('app-manager-failsafe')->table('discounts_usage_log')
