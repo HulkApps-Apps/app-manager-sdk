@@ -147,7 +147,7 @@ trait FailsafeHelper {
 
         $discountShop = DB::connection('app-manager-failsafe')->table('discount_shops')
             ->where('discount_id', $discountData->id)
-            ->first();
+            ->count();
 
         $discountPlan = DB::connection('app-manager-failsafe')->table('discount_plans')
             ->where('discount_id', $discountData->id)
@@ -158,7 +158,7 @@ trait FailsafeHelper {
             ->where('domain', $shopDomain)
             ->count();
 
-        if (!empty($discountShop)) {
+        if ($discountShop > 0) {
             $discountShopSpecific = DB::connection('app-manager-failsafe')->table('discount_shops')
                 ->where('discount_id', $discountData->id)
                 ->where('domain', $shopDomain)
@@ -166,7 +166,6 @@ trait FailsafeHelper {
             if(empty($discountShopSpecific)){
                 return [];
             }
-            return [];
         }
 
         if ($discountData->max_usage !== null
@@ -324,7 +323,7 @@ trait FailsafeHelper {
                         foreach ($discountsUsageLog as $discountUsageLog) {
                             $discountUsageLog = json_decode(json_encode($discountUsageLog), true);
 
-                            $response = \AppManager::syncDiscountUsageLog(['shop' => ['shop_domain' => $discountUsageLog['domain']], 'discount_id' => (int) $discountUsageLog['discount_id']]);
+                            $response = \AppManager::syncDiscountUsageLog(['shop_domain' => $discountUsageLog['domain'], 'discount_id' => (int) $discountUsageLog['discount_id']]);
 
                             if ($response) {
                                 DB::connection('app-manager-failsafe')->table('discounts_usage_log')
