@@ -133,12 +133,12 @@ trait FailsafeHelper {
             ->where('valid_from', '<=', $now)
             ->where('valid_to', '>=', $now)
             ->where('code', $code)
-            ->when(
-                $reinstall === true,
-                function (Builder $q) {
-                    return $q->where('multiple_uses', true);
-                },
-            )
+//            ->when(
+//                $reinstall === true,
+//                function (Builder $q) {
+//                    return $q->where('multiple_uses', true);
+//                },
+//            )
             ->first();
 
         if (empty($discountData)) {
@@ -154,6 +154,10 @@ trait FailsafeHelper {
             ->get()->pluck('plan_id')->toArray();
 
         $discountUsage = DB::connection('app-manager-failsafe')->table('discounts_usage_log')
+            ->where('discount_id', $discountData->id)
+            ->count();
+
+        $discountUsageByDomain = DB::connection('app-manager-failsafe')->table('discounts_usage_log')
             ->where('discount_id', $discountData->id)
             ->where('domain', $shopDomain)
             ->count();
@@ -177,8 +181,8 @@ trait FailsafeHelper {
         }
 
         if (
-            $discountData->multiple_uses === false
-            && !empty($discountUsage)
+            $discountData->multiple_uses === 0
+            && !empty($discountUsageByDomain)
         ) {
             return [];
         }
@@ -318,20 +322,20 @@ trait FailsafeHelper {
                                 ]);
                         }
                     }
+                }
 
-                    if ($discountsUsageLog) {
-                        foreach ($discountsUsageLog as $discountUsageLog) {
-                            $discountUsageLog = json_decode(json_encode($discountUsageLog), true);
+                if ($discountsUsageLog) {
+                    foreach ($discountsUsageLog as $discountUsageLog) {
+                        $discountUsageLog = json_decode(json_encode($discountUsageLog), true);
 
-                            $response = \AppManager::syncDiscountUsageLog(['shop_domain' => $discountUsageLog['domain'], 'discount_id' => (int) $discountUsageLog['discount_id']]);
+                        $response = \AppManager::syncDiscountUsageLog(['shop_domain' => $discountUsageLog['domain'], 'discount_id' => (int) $discountUsageLog['discount_id']]);
 
-                            if ($response) {
-                                DB::connection('app-manager-failsafe')->table('discounts_usage_log')
-                                    ->where('id', $discountUsageLog['id'])->update([
-                                        'sync' => 1,
-                                        'process_type' => null
-                                    ]);
-                            }
+                        if ($response) {
+                            DB::connection('app-manager-failsafe')->table('discounts_usage_log')
+                                ->where('id', $discountUsageLog['id'])->update([
+                                    'sync' => 1,
+                                    'process_type' => null
+                                ]);
                         }
                     }
                 }

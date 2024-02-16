@@ -157,7 +157,7 @@ class ChargeController extends Controller
 
             $promotionalDiscountId = $plan['discount'] && $promotionalDiscount ? 0 : ($promotionalDiscount ? $promotionalDiscount['id'] : 0);
             $plansRelation = $promotionalDiscount && $promotionalDiscount['plan_relation'] ? $promotionalDiscount['plan_relation'] : [];
-            $requestData = ['shop' => $shop->$storeNameField, 'timestamp' => now()->unix() * 1000, 'plan' => $plan_id, 'promo_discount' => $promotionalDiscountId, 'discounted_plans' => $plansRelation];
+            $requestData = ['shop' => $shop->$storeNameField, 'timestamp' => now()->unix() * 1000, 'plan' => $plan_id, 'promo_discount' => $promotionalDiscountId, 'discounted_plans' => json_encode($plansRelation)];
 
             //add host
             if($request->has('host') && !empty($request->host)){
@@ -265,7 +265,7 @@ class ChargeController extends Controller
 
                 try {
                     event(new PlanActivated($plan, $charge, $chargeData['cancelled_charge'] ?? null));
-                    if(!empty($request->promo_discount) && !empty($request->discounted_plans) && in_array($request->plan, $request->discounted_plans)){
+                    if(!empty($request->promo_discount) && !empty($request->discounted_plans) && in_array($request->plan, json_decode($request->discounted_plans))){
                         $discountApplied = \AppManager::discountUsed($shop->$storeName, $request->promo_discount);
                     }elseif (!empty($request->promo_discount) && empty($request->discounted_plans))
                         $discountApplied = \AppManager::discountUsed($shop->$storeName, $request->promo_discount);
