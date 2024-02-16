@@ -219,6 +219,7 @@ class ChargeController extends Controller
         $storeToken = config('app-manager.field_names.shopify_token');
         $storePlanField = config('app-manager.field_names.plan_id', 'plan_id');
         $storeGrandfathered = config('app-manager.field_names.grandfathered', 'grandfathered');
+        $discountedPlans = json_decode($request->discounted_plans);
 
         $shop = DB::table($tableName)->where($storeName, $request->shop)->first();
         $apiVersion = config('app-manager.shopify_api_version');
@@ -265,9 +266,9 @@ class ChargeController extends Controller
 
                 try {
                     event(new PlanActivated($plan, $charge, $chargeData['cancelled_charge'] ?? null));
-                    if(!empty($request->promo_discount) && !empty($request->discounted_plans) && in_array($request->plan, json_decode($request->discounted_plans))){
+                    if(!empty($request->promo_discount) && !empty($discountedPlans) && in_array($request->plan, $discountedPlans)){
                         $discountApplied = \AppManager::discountUsed($shop->$storeName, $request->promo_discount);
-                    }elseif (!empty($request->promo_discount) && empty($request->discounted_plans))
+                    }elseif (!empty($request->promo_discount) && empty($discountedPlans))
                         $discountApplied = \AppManager::discountUsed($shop->$storeName, $request->promo_discount);
                 } catch (\Exception $exception) {
                     report($exception);
