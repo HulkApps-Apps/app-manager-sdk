@@ -195,7 +195,7 @@ class PlanController extends Controller
         $plan_users = $this->filterData($data['plan_users'],$commanFields);
         DB::connection('app-manager-failsafe')->table('plan_user')->insert($plan_users);
 
-        $promotional_discounts = $this->filterData($data['promotional_discounts'],$commanFields);
+        $promotional_discounts = $data['promotional_discounts'];
         DB::connection('app-manager-failsafe')->table('discounts')->insert($promotional_discounts);
 
         $promotional_discounts_shops = $data['promotional_discounts_shops'];
