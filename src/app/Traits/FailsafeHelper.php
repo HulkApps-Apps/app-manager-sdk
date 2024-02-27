@@ -187,6 +187,18 @@ trait FailsafeHelper {
             return [];
         }
 
+        if ($discountData->multiple_apps === 0)
+        {
+            $discountUsageByApp = DB::connection('app-manager-failsafe')->table('discounts_usage_log')
+                ->where('discount_id', $discountData->id)
+                ->where('domain', $shopDomain)
+                ->where('app_id', '!=', $discountData->app_id)
+                ->first();
+            if ($discountUsageByApp) {
+                return [];
+            }
+        }
+
         $discountData = json_decode(json_encode($discountData), true);
         $discountData['plan_relation'] = $discountPlan;
         return $this->unSerializeData($discountData);
@@ -279,6 +291,7 @@ trait FailsafeHelper {
         $data['domain'] = $shop;
         $data['sync'] = false;
         $data['process_type'] = 'use-discount';
+        $data['app_id'] = DB::connection('app-manager-failsafe')->table('discounts')->where('id', $discount_id)->pluck('app_id')->first();
         $discountUsageLog = DB::connection('app-manager-failsafe')->table('discounts_usage_log')->insert($data);
         return ['message' => $discountUsageLog ? 'success' : 'fail'];
     }

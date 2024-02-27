@@ -114,6 +114,7 @@ class CreateAppManagerTables extends Migration
             $table->unsignedSmallInteger('priority')->default(0);
             $table->boolean('multiple_uses')->default(true);
             $table->boolean('multiple_apps')->default(true);
+            $table->integer('app_id')->default(0);
             $table->timestamps();
             $table->softDeletes();
         });
