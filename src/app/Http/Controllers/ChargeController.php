@@ -146,7 +146,7 @@ class ChargeController extends Controller
 
                     $discount =[
                         'value' => [
-                            $discount_type => $discount_type === "percentage" ? (float)$promotionalDiscount['value'] / 100 : $promotionalDiscount['value'],
+                            $discount_type => $discount_type === "percentage" ? (float)$promotionalDiscount['value'] / 100 : ($promotionalDiscount['value'] <= $plan['price'] ? $promotionalDiscount['value'] : $plan['price']),
                         ],
                     ];
                     if((int)$promotionalDiscount['duration_intervals']){
