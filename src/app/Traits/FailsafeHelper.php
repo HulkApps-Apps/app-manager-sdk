@@ -272,6 +272,7 @@ trait FailsafeHelper {
     public function storeChargeHelper($data) {
         $data['sync'] = false;
         $data['process_type'] = 'store-charge';
+        unset($data['capped_amount'], $data['balance_used'], $data['balance_remaining'], $data['risk_level']);
         $charge = DB::connection('app-manager-failsafe')->table('charges')->insert($data);
         return ['message' => $charge ? 'success' : 'fail'];
     }
