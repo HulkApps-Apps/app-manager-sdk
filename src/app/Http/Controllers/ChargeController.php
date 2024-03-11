@@ -89,11 +89,7 @@ class ChargeController extends Controller
         ';
 
             $trialDays = $plan['trial_days'] ?? 0;
-            $requestData = ['shop' => $shop->$storeNameField, 'timestamp' => now()->unix() * 1000, 'plan' => $plan_id];
-            //add host
-            if($request->has('host') && !empty($request->host)){
-                $requestData['host'] = $request->host;
-            }
+
             if (!empty($shop->$storePlanField) && $trialDays) {
 
                 $remaining = \AppManager::getRemainingDays($shop->$storeNameField, $shop->$storeTrialActivatedAtField, $shop->$storePlanField);
@@ -112,7 +108,6 @@ class ChargeController extends Controller
                 //$trialDays = $remaining !== null ? $remaining : $trialDays;
             }
 
-            $discount_type = $plan['discount_type'] ?? "percentage";
 
             $shopifyPlan = $shop->$storeShopifyPlanField;
 
@@ -122,16 +117,51 @@ class ChargeController extends Controller
                 $test = in_array($shopifyPlan, array_column($plan['affiliate'], 'value')) ? true : null;
             }
 
-            $planDiscount = [];
-            if (!empty($plan['discount'])) {
-                $planDiscount = [
+            $promotionalDiscount=[];
+            $discountCookie = \AppManager::resolveFromCookies();
+
+            if ($discountCookie !== null) {
+                $reinstall = \AppManager::checkIfIsReinstall($shop->created_at);
+                $promotionalDiscount = \AppManager::getPromotionalDiscount($request->shop, $discountCookie['codeType'], $discountCookie['code'], $reinstall);
+            }
+
+            $discount = [];
+            if($plan['discount']){
+                $discount_type = $plan['discount_type'] ?? "percentage";
+
+                $discount = [
                     'value' => [
                         $discount_type => $discount_type === "percentage" ? (float)$plan['discount'] / 100 : $plan['discount'],
-                    ]
+                    ],
                 ];
                 if((int)$plan['cycle_count']){
-                    $planDiscount['durationLimitInIntervals'] = (int)$plan['cycle_count'];
+                    $discount['durationLimitInIntervals'] = (int)$plan['cycle_count'];
                 }
+            }elseif ($promotionalDiscount){
+                if($promotionalDiscount['plan_relation'] && !in_array($plan['id'], $promotionalDiscount['plan_relation'])){
+                    $discount = [];
+                }
+                else{
+                    $discount_type = $promotionalDiscount['type'] ?? "percentage";
+
+                    $discount =[
+                        'value' => [
+                            $discount_type => $discount_type === "percentage" ? (float)$promotionalDiscount['value'] / 100 : ($promotionalDiscount['value'] <= $plan['price'] ? $promotionalDiscount['value'] : $plan['price']),
+                        ],
+                    ];
+                    if((int)$promotionalDiscount['duration_intervals']){
+                        $discount['durationLimitInIntervals'] = (int)$promotionalDiscount['duration_intervals'];
+                    }
+                }
+            }
+
+            $promotionalDiscountId = $plan['discount'] && $promotionalDiscount ? 0 : ($promotionalDiscount ? $promotionalDiscount['id'] : 0);
+            $plansRelation = $promotionalDiscount && $promotionalDiscount['plan_relation'] ? $promotionalDiscount['plan_relation'] : [];
+            $requestData = ['shop' => $shop->$storeNameField, 'timestamp' => now()->unix() * 1000, 'plan' => $plan_id, 'promo_discount' => $promotionalDiscountId, 'discounted_plans' => json_encode($plansRelation)];
+
+            //add host
+            if($request->has('host') && !empty($request->host)){
+                $requestData['host'] = $request->host;
             }
 
             $variables = [
@@ -147,7 +177,7 @@ class ChargeController extends Controller
                                     'amount' => $plan['price'],
                                     'currencyCode' => 'USD',
                                 ],
-                                'discount' => $planDiscount,
+                                'discount' => $discount,
                                 'interval' => $plan['interval']['value'],
                             ]),
                         ],
@@ -189,6 +219,7 @@ class ChargeController extends Controller
         $storeToken = config('app-manager.field_names.shopify_token');
         $storePlanField = config('app-manager.field_names.plan_id', 'plan_id');
         $storeGrandfathered = config('app-manager.field_names.grandfathered', 'grandfathered');
+        $discountedPlans = json_decode($request->discounted_plans);
 
         $shop = DB::table($tableName)->where($storeName, $request->shop)->first();
         $apiVersion = config('app-manager.shopify_api_version');
@@ -235,6 +266,10 @@ class ChargeController extends Controller
 
                 try {
                     event(new PlanActivated($plan, $charge, $chargeData['cancelled_charge'] ?? null));
+                    if(!empty($request->promo_discount) && !empty($discountedPlans) && in_array($request->plan, $discountedPlans)){
+                        $discountApplied = \AppManager::discountUsed($shop->$storeName, $request->promo_discount);
+                    }elseif (!empty($request->promo_discount) && empty($discountedPlans))
+                        $discountApplied = \AppManager::discountUsed($shop->$storeName, $request->promo_discount);
                 } catch (\Exception $exception) {
                     report($exception);
                 }

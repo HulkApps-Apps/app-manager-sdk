@@ -2,9 +2,13 @@
 
 namespace HulkApps\AppManager;
 
+use Carbon\Carbon;
 use HulkApps\AppManager\app\Traits\FailsafeHelper;
 use HulkApps\AppManager\Client\Client;
+use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+
 
 class AppManager
 {
@@ -56,6 +60,20 @@ class AppManager
         }
     }
 
+    public function getPromotionalDiscount($shop_domain = null, $codeType, $code, $reinstall) {
+
+        try {
+            $data = $this->client->get('discount', ['shop_domain' => $shop_domain, 'reinstall' => $reinstall, 'code_type' => $codeType, 'code' => $code]);
+            if($data->getStatusCode() === 404)
+                return [];
+            return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->prepareDiscount(['shop_domain' => $shop_domain, 'reinstall' => $reinstall, 'code_type' => $codeType, 'code' => $code]);
+        }
+        catch (\Exception $e) {
+            report($e);
+            return $this->prepareDiscount(['shop_domain' => $shop_domain, 'reinstall' => $reinstall, 'code_type' => $codeType, 'code' => $code]);
+        }
+    }
+
     public function storeCharge($payload) {
 
         try {
@@ -99,6 +117,12 @@ class AppManager
     public function syncCharge($payload) {
 
         $data = $this->client->post('sync-charge', $payload);
+        return $data->json();
+    }
+
+    public function syncDiscountUsageLog($payload) {
+
+        $data = $this->client->post('use-discount-sync', $payload);
         return $data->json();
     }
 
@@ -161,4 +185,52 @@ class AppManager
     public function getStatus() {
         return $this->client->get('get-status');
     }
+
+    public function discountUsed($shop_domain, $discount_id){
+        try {
+            $data = $this->client->post('use-discount', ['shop_domain' => $shop_domain, 'discount_id' => (int) $discount_id]);
+            return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->storePromotionalDiscountHelper($shop_domain, $discount_id);
+        }
+        catch (\Exception $e) {
+            report($e);
+            return $this->storePromotionalDiscountHelper($shop_domain, $discount_id);
+        }
+    }
+
+    public function setCookie($destinationUrl)
+    {
+        $url = url()->current();
+        $host = parse_url($url, PHP_URL_HOST);
+        $discountCode = collect(explode('/', parse_url($url, PHP_URL_PATH)))->get(2, '');
+
+        try {
+            $lifetime = time() + 60 * 60 * 24 * 365;
+            Cookie::queue('ShopCircleDiscount', $discountCode, $lifetime, '/', $host, true, true, false, 'None');
+            $queryString = request()->getQueryString();
+            Cache::flush();
+            return redirect()->to($destinationUrl);
+        }catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+
+    }
+
+    public function resolveFromCookies(): ?array
+    {
+        if (Cookie::has('ShopCircleDiscount') === true) {
+            return [
+                'codeType' => 'normal',
+                'code' => Cookie::get('ShopCircleDiscount'),
+            ];
+        }
+
+        return null;
+    }
+
+    public function checkIfIsReinstall($created_at): bool
+    {
+        $created_at = Carbon::parse($created_at);
+        return $created_at->isBefore(now()->subMinutes(5));
+    }
+
 }
