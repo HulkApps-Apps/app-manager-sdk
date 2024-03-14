@@ -65,11 +65,11 @@ class PlanController extends Controller
             }
 
             $promotionalDiscount=[];
-            $discountCookie = \AppManager::resolveFromCookies();
-
-            if ($discountCookie !== null) {
-                $reinstall = \AppManager::checkIfIsReinstall(collect($userData)->pluck('created_at')->first());
-                $promotionalDiscount = \AppManager::getPromotionalDiscount($shopDomain, $discountCookie['codeType'], $discountCookie['code'], $reinstall);
+            if($request->has('discount_code')){
+                $discountCode = $request->get('discount_code');
+                if (!empty($discountCode)) {
+                    $promotionalDiscount = \AppManager::getPromotionalDiscount($shopDomain, $discountCode);
+                }
             }
 
             return [

@@ -118,11 +118,13 @@ class ChargeController extends Controller
             }
 
             $promotionalDiscount=[];
-            $discountCookie = \AppManager::resolveFromCookies();
 
-            if ($discountCookie !== null) {
-                $reinstall = \AppManager::checkIfIsReinstall($shop->created_at);
-                $promotionalDiscount = \AppManager::getPromotionalDiscount($request->shop, $discountCookie['codeType'], $discountCookie['code'], $reinstall);
+            $promotionalDiscount=[];
+            if($request->has('discount_code')){
+                $discountCode = $request->get('discount_code');
+                if (!empty($discountCode)) {
+                    $promotionalDiscount = \AppManager::getPromotionalDiscount($request->shop, $discountCode);
+                }
             }
 
             $discount = [];
