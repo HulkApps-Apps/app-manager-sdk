@@ -123,8 +123,6 @@ trait FailsafeHelper {
 
     public function prepareDiscount($data) {
         $code =  hex2bin($data['code']);
-        $codeType =  $data['code_type'];
-        $reinstall = $data['reinstall'];
         $shopDomain = $data['shop_domain'];
         $now = now();
 
@@ -133,12 +131,6 @@ trait FailsafeHelper {
             ->where('valid_from', '<=', $now)
             ->where('valid_to', '>=', $now)
             ->where('code', $code)
-//            ->when(
-//                $reinstall === true,
-//                function (Builder $q) {
-//                    return $q->where('multiple_uses', true);
-//                },
-//            )
             ->first();
 
         if (empty($discountData)) {
