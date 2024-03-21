@@ -129,7 +129,10 @@ trait FailsafeHelper {
         $discountData = DB::connection('app-manager-failsafe')->table('discounts')
             ->where('enabled', true)
             ->where('valid_from', '<=', $now)
-            ->where('valid_to', '>=', $now)
+            ->where(function ($query) use ($now) {
+                $query->whereNull('valid_to')
+                    ->orWhere('valid_to', '>=', $now);
+            })
             ->where('code', $code)
             ->first();
 
