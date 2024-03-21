@@ -118,11 +118,13 @@ class ChargeController extends Controller
             }
 
             $promotionalDiscount=[];
-            $discountCookie = \AppManager::resolveFromCookies();
 
-            if ($discountCookie !== null) {
-                $reinstall = \AppManager::checkIfIsReinstall($shop->created_at);
-                $promotionalDiscount = \AppManager::getPromotionalDiscount($request->shop, $discountCookie['codeType'], $discountCookie['code'], $reinstall);
+            $promotionalDiscount=[];
+            if($request->has('discount_code')){
+                $discountCode = $request->get('discount_code');
+                if (!empty($discountCode)) {
+                    $promotionalDiscount = \AppManager::getPromotionalDiscount($request->shop, $discountCode);
+                }
             }
 
             $discount = [];
@@ -164,9 +166,16 @@ class ChargeController extends Controller
                 $requestData['host'] = $request->host;
             }
 
+
+            $returnUrlRoute = route('app-manager.plan.callback');
+            if (strpos($returnUrlRoute, '?') !== false)
+                $returnToUrl = $returnUrlRoute . "&" . http_build_query($requestData, '', '&', PHP_QUERY_RFC3986);
+            else
+                $returnToUrl = $returnUrlRoute . "?" . http_build_query($requestData, '', '&', PHP_QUERY_RFC3986);
+
             $variables = [
                 'name' => $plan['name'],
-                'returnUrl' => route('app-manager.plan.callback')."?".http_build_query($requestData, '', '&', PHP_QUERY_RFC3986),
+                'returnUrl' => $returnToUrl,
                 'trialDays' => $trialDays,
                 'test' => $test,
                 'lineItems' => [

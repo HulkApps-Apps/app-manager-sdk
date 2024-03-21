@@ -26,10 +26,6 @@ class AppManagerServiceProvider extends ServiceProvider
         $router->aliasMiddleware('app-manager-api', VerifyAPIRequest::class);
         $router->aliasMiddleware('app-manager:has-plan', HasPlan::class);
 
-        $this->app->resolving(EncryptCookies::class, function ($object) {
-            $object->disableFor('ShopCircleDiscount');
-        });
-
         if ($this->app->runningInConsole()) {
             $this->publishes([
                 __DIR__.'/../config/config.php' => config_path('app-manager.php'),

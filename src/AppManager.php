@@ -60,17 +60,17 @@ class AppManager
         }
     }
 
-    public function getPromotionalDiscount($shop_domain = null, $codeType, $code, $reinstall) {
+    public function getPromotionalDiscount($shop_domain = null, $code) {
 
         try {
-            $data = $this->client->get('discount', ['shop_domain' => $shop_domain, 'reinstall' => $reinstall, 'code_type' => $codeType, 'code' => $code]);
+            $data = $this->client->get('discount', ['shop_domain' => $shop_domain, 'code' => $code]);
             if($data->getStatusCode() === 404)
                 return [];
-            return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->prepareDiscount(['shop_domain' => $shop_domain, 'reinstall' => $reinstall, 'code_type' => $codeType, 'code' => $code]);
+            return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->prepareDiscount(['shop_domain' => $shop_domain, 'code' => $code]);
         }
         catch (\Exception $e) {
             report($e);
-            return $this->prepareDiscount(['shop_domain' => $shop_domain, 'reinstall' => $reinstall, 'code_type' => $codeType, 'code' => $code]);
+            return $this->prepareDiscount(['shop_domain' => $shop_domain,  'code' => $code]);
         }
     }
 
@@ -197,40 +197,18 @@ class AppManager
         }
     }
 
-    public function setCookie($destinationUrl)
+    public function saveToLocalStorage($destinationUrl)
     {
         $url = url()->current();
-        $host = parse_url($url, PHP_URL_HOST);
         $discountCode = collect(explode('/', parse_url($url, PHP_URL_PATH)))->get(2, '');
 
         try {
-            $lifetime = time() + 60 * 60 * 24 * 365;
-            Cookie::queue('ShopCircleDiscount', $discountCode, $lifetime, '/', $host, true, true, false, 'None');
-            $queryString = request()->getQueryString();
             Cache::flush();
-            return redirect()->to($destinationUrl);
+            $response = redirect()->to($destinationUrl. '?discount_code=' . $discountCode);
+            return $response;
         }catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
-
-    }
-
-    public function resolveFromCookies(): ?array
-    {
-        if (Cookie::has('ShopCircleDiscount') === true) {
-            return [
-                'codeType' => 'normal',
-                'code' => Cookie::get('ShopCircleDiscount'),
-            ];
-        }
-
-        return null;
-    }
-
-    public function checkIfIsReinstall($created_at): bool
-    {
-        $created_at = Carbon::parse($created_at);
-        return $created_at->isBefore(now()->subMinutes(5));
     }
 
 }
