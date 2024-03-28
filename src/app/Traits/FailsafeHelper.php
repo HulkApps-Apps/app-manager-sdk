@@ -199,6 +199,12 @@ trait FailsafeHelper {
         return $this->unSerializeData($discountData);
     }
 
+    public function prepareRelatedDiscountedPlans($discount_id) {
+        $discountPlans = DB::connection('app-manager-failsafe')->table('discount_plans')
+            ->where('discount_id', $discount_id)->get()->pluck('plan_id')->toArray();
+        return $discountPlans;
+    }
+
     public function prepareRemainingDays($data) {
         $trialActivatedAt = $data['trial_activated_at'];
         $planId = $data['plan_id'];
