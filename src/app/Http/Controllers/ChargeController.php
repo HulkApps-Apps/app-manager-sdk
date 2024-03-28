@@ -159,7 +159,15 @@ class ChargeController extends Controller
 
             $promotionalDiscountId = $plan['discount'] && $promotionalDiscount ? 0 : ($promotionalDiscount ? $promotionalDiscount['id'] : 0);
             $plansRelation = $promotionalDiscount && $promotionalDiscount['plan_relation'] ? $promotionalDiscount['plan_relation'] : [];
-            $requestData = ['shop' => $shop->$storeNameField, 'timestamp' => now()->unix() * 1000, 'plan' => $plan_id, 'promo_discount' => $promotionalDiscountId, 'discounted_plans' => json_encode($plansRelation)];
+            $requestData = ['shop' => $shop->$storeNameField, 'timestamp' => now()->unix() * 1000, 'plan' => $plan_id];
+            //discount data
+            if($promotionalDiscountId > 0){
+                $requestData['promo_discount'] = $promotionalDiscountId;
+                unset($requestData['timestamp']);
+                if(!empty($plansRelation)){
+                    $requestData['discounted_plans'] = json_encode($plansRelation);
+                }
+            }
 
             //add host
             if($request->has('host') && !empty($request->host)){
@@ -228,7 +236,7 @@ class ChargeController extends Controller
         $storeToken = config('app-manager.field_names.shopify_token');
         $storePlanField = config('app-manager.field_names.plan_id', 'plan_id');
         $storeGrandfathered = config('app-manager.field_names.grandfathered', 'grandfathered');
-        $discountedPlans = json_decode($request->discounted_plans);
+        $discountedPlans = $request->has('discounted_plans')?json_decode($request->discounted_plans):[];
 
         $shop = DB::table($tableName)->where($storeName, $request->shop)->first();
         $apiVersion = config('app-manager.shopify_api_version');
