@@ -53,6 +53,7 @@ class ChargeController extends Controller
                     ->update($userUpdateInfo);
                 try {
                     $plan['shop_domain'] = $request->shop;
+                    $plan['old_plan'] = $request->old_plan ?? null;
                     event(new PlanActivated($plan, null, null));
                 } catch (\Exception $exception) {
                     report($exception);
@@ -159,6 +160,10 @@ class ChargeController extends Controller
 
             $requestData = ['shop' => $shop->$storeNameField, 'timestamp' => now()->unix() * 1000, 'plan' => $plan_id];
 
+            if($request->has('old_plan') && !empty($request->old_plan)){
+                $requestData['old_plan'] = $request->old_plan;
+            }
+
             if(!empty($promotionalDiscountId)){
                 $requestData['discount'] = $promotionalDiscountId;
             }
@@ -247,6 +252,8 @@ class ChargeController extends Controller
             ->get("https://{$shop->$storeName}/admin/api/$apiVersion/recurring_application_charges/{$request->charge_id}.json")->json();
 
         $plan = \AppManager::getPlan($request->plan, $shop->id);
+        $plan['old_plan'] = $request->old_plan ?? null;
+
         if (!empty($charge['recurring_application_charge'])) {
 
             $charge = $charge['recurring_application_charge'];
