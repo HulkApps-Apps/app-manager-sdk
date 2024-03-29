@@ -53,6 +53,7 @@ class ChargeController extends Controller
                     ->update($userUpdateInfo);
                 try {
                     $plan['shop_domain'] = $request->shop;
+                    $plan['old_plan'] = $request->old_plan ?? null;
                     event(new PlanActivated($plan, null, null));
                 } catch (\Exception $exception) {
                     report($exception);
@@ -118,8 +119,6 @@ class ChargeController extends Controller
             }
 
             $promotionalDiscount=[];
-
-            $promotionalDiscount=[];
             if($request->has('discount_code')){
                 $discountCode = $request->get('discount_code');
                 if (!empty($discountCode)) {
@@ -158,15 +157,15 @@ class ChargeController extends Controller
             }
 
             $promotionalDiscountId = $plan['discount'] && $promotionalDiscount ? 0 : ($promotionalDiscount ? $promotionalDiscount['id'] : 0);
-            $plansRelation = $promotionalDiscount && $promotionalDiscount['plan_relation'] ? $promotionalDiscount['plan_relation'] : [];
+
             $requestData = ['shop' => $shop->$storeNameField, 'timestamp' => now()->unix() * 1000, 'plan' => $plan_id];
-            //discount data
-            if($promotionalDiscountId > 0){
-                $requestData['promo_discount'] = $promotionalDiscountId;
-                unset($requestData['timestamp']);
-                if(!empty($plansRelation)){
-                    $requestData['discounted_plans'] = json_encode($plansRelation);
-                }
+
+            if($request->has('old_plan') && !empty($request->old_plan)){
+                $requestData['old_plan'] = $request->old_plan;
+            }
+
+            if(!empty($promotionalDiscountId)){
+                $requestData['discount'] = $promotionalDiscountId;
             }
 
             //add host
@@ -236,7 +235,6 @@ class ChargeController extends Controller
         $storeToken = config('app-manager.field_names.shopify_token');
         $storePlanField = config('app-manager.field_names.plan_id', 'plan_id');
         $storeGrandfathered = config('app-manager.field_names.grandfathered', 'grandfathered');
-        $discountedPlans = $request->has('discounted_plans')?json_decode($request->discounted_plans):[];
 
         $shop = DB::table($tableName)->where($storeName, $request->shop)->first();
         $apiVersion = config('app-manager.shopify_api_version');
@@ -254,6 +252,8 @@ class ChargeController extends Controller
             ->get("https://{$shop->$storeName}/admin/api/$apiVersion/recurring_application_charges/{$request->charge_id}.json")->json();
 
         $plan = \AppManager::getPlan($request->plan, $shop->id);
+        $plan['old_plan'] = $request->old_plan ?? null;
+
         if (!empty($charge['recurring_application_charge'])) {
 
             $charge = $charge['recurring_application_charge'];
@@ -281,12 +281,18 @@ class ChargeController extends Controller
                 DB::table($tableName)->where($storeName, $request->shop)->update($userUpdateInfo);
                 $chargeData = \AppManager::getCharge($shop->$storeName);
 
+                $discountedPlans = [];
+                if(!empty($request->discount))
+                    $discountedPlans = \AppManager::getRelatedDiscountedPlans($request->discount);
+
                 try {
                     event(new PlanActivated($plan, $charge, $chargeData['cancelled_charge'] ?? null));
-                    if(!empty($request->promo_discount) && !empty($discountedPlans) && in_array($request->plan, $discountedPlans)){
-                        $discountApplied = \AppManager::discountUsed($shop->$storeName, $request->promo_discount);
-                    }elseif (!empty($request->promo_discount) && empty($discountedPlans))
-                        $discountApplied = \AppManager::discountUsed($shop->$storeName, $request->promo_discount);
+                    if (!empty($request->discount)) {
+                        if (empty($discountedPlans) || in_array($request->plan, $discountedPlans)) {
+                            $discountApplied = \AppManager::discountUsed($shop->$storeName, $request->discount);
+                        }
+                    }
+
                 } catch (\Exception $exception) {
                     report($exception);
                 }
