@@ -186,6 +186,19 @@ class AppManager
         return $this->client->get('get-status');
     }
 
+    public function getRelatedDiscountedPlans($discount_id) {
+        try {
+            $data = $this->client->get('get-related-discounted-plans', ['discount_id' => (int) $discount_id]);
+            if($data->getStatusCode() === 404)
+                return [];
+            return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->prepareRelatedDiscountedPlans((int) $discount_id);
+        }
+        catch (\Exception $e) {
+            report($e);
+            return $this->prepareRelatedDiscountedPlans((int) $discount_id);
+        }
+    }
+
     public function discountUsed($shop_domain, $discount_id){
         try {
             $data = $this->client->post('use-discount', ['shop_domain' => $shop_domain, 'discount_id' => (int) $discount_id]);
