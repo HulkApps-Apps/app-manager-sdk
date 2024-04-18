@@ -175,7 +175,7 @@ class PlanController extends Controller
         ];
         DB::connection('app-manager-failsafe')->table('marketing_banners')->insert($marketingBanners);
 
-        $plans = $this->filterData($data['plans'],$commanFields);
+        $plans = $this->filterData($data['plans'], ['created_at', 'updated_at','deleted_at']);
         foreach ($plans as $index => $plan) {
             $plans[$index] = $this->serializeData($plan);
             $plans[$index]['feature_plan'] = $plans[$index]['features'];
@@ -195,16 +195,16 @@ class PlanController extends Controller
         $plan_users = $this->filterData($data['plan_users'],$commanFields);
         DB::connection('app-manager-failsafe')->table('plan_user')->insert($plan_users);
 
-        $promotional_discounts = $this->filterData($data['promotional_discounts']);
+        $promotional_discounts = $this->filterData($data['promotional_discounts'],['created_at', 'updated_at','deleted_at']);
         DB::connection('app-manager-failsafe')->table('discounts')->insert($promotional_discounts);
 
-        $promotional_discounts_shops = $this->filterData($data['promotional_discounts_shops']);
+        $promotional_discounts_shops = $data['promotional_discounts_shops'];
         DB::connection('app-manager-failsafe')->table('discount_shops')->insert($promotional_discounts_shops);
 
-        $promotional_discounts_plans = $this->filterData($data['promotional_discounts_plans']);
+        $promotional_discounts_plans = $data['promotional_discounts_plans'];
         DB::connection('app-manager-failsafe')->table('discount_plans')->insert($promotional_discounts_plans);
 
-        $promotional_discounts_usage_log = $this->filterData($data['promotional_discounts_usage_log']);
+        $promotional_discounts_usage_log = $this->filterData($data['promotional_discounts_usage_log'],$commanFields);
         DB::connection('app-manager-failsafe')->table('discounts_usage_log')->insert($promotional_discounts_usage_log);
     }
 
@@ -212,7 +212,9 @@ class PlanController extends Controller
         $data = collect($data)->map(function ($value, $key) use ($fields){
             if(!empty($fields)){
                 foreach($fields as $field){
-                    $value[$field] = \Carbon\Carbon::parse($value[$field])->format('Y-m-d H:i:s');
+                    if(isset($value[$field])){
+                        $value[$field] = \Carbon\Carbon::parse($value[$field])->format('Y-m-d H:i:s');
+                    }
                 }
             }
             return collect($value)->forget('app_id')->toArray();
