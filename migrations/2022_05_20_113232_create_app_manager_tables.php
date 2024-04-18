@@ -78,7 +78,7 @@ class CreateAppManagerTables extends Migration
 			$table->smallInteger('cycle_count')->nullable();
 			$table->unsignedBigInteger('created_by');
 			$table->string('shop_domain');
-			$table->unsignedBigInteger('plan_id')->nullable();
+			$table->bigInteger('plan_id')->nullable();
 			$table->timestamps();
 		});
 
@@ -136,7 +136,7 @@ class CreateAppManagerTables extends Migration
 
         Schema::create('discount_plans', function (Blueprint $table) {
             $table->unsignedBigInteger('discount_id')->index();
-            $table->unsignedBigInteger('plan_id')->index();
+            $table->bigInteger('plan_id')->index();
         });
     }
 
