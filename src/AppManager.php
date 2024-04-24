@@ -216,7 +216,7 @@ class AppManager
         $discountCode = collect(explode('/', parse_url($url, PHP_URL_PATH)))->get(2, '');
 
         try {
-            Cache::flush();
+            Cache::tags('app-manager')->flush();
             $response = redirect()->to($destinationUrl. '?discount_code=' . $discountCode);
             return $response;
         }catch (\Exception $e) {

@@ -10,7 +10,7 @@ class BannerController extends Controller
 {
     public function index() {
 
-        $banners = Cache::rememberForever('app-manager.banners', function () {
+        $banners = Cache::tags('app-manager')->rememberForever('app-manager.banners', function () {
             return \AppManager::getBanners();
         });
 
