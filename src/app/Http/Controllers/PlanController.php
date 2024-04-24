@@ -28,7 +28,7 @@ class PlanController extends Controller
         $shopifyPlanFieldName = config('app-manager.field_names.shopify_plan', 'shopify_plan');
         $cacheKey = $request->has('shop_domain') ? 'app-manager.plans-'.$request->get('shop_domain') : 'app-manager.all-plans';
 
-        $response = Cache::rememberForever($cacheKey, function () use ($request, $shopTableName, $storeFieldName, $planFieldName, $shopifyPlanFieldName, $cacheKey) {
+        $response = Cache::tags('app-manager')->rememberForever($cacheKey, function () use ($request, $shopTableName, $storeFieldName, $planFieldName, $shopifyPlanFieldName, $cacheKey) {
             $shopify_plan = $plan = $plans = $trialActivatedAt = null;
             $choose_later = false;
 
@@ -149,7 +149,7 @@ class PlanController extends Controller
 
     public function burstCache(Request $request) {
 
-        Artisan::call('cache:clear');
+        Cache::tags('app-manager')->flush();
         return true;
     }
 
