@@ -10,8 +10,8 @@ use HulkApps\AppManager\GraphQL\GraphQL;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class ChargeController extends Controller
@@ -58,7 +58,7 @@ class ChargeController extends Controller
                 } catch (\Exception $exception) {
                     report($exception);
                 }
-                Artisan::call('cache:clear');
+                Cache::tags('app-manager')->flush();
                 return response()->json(['status' => true,'plan_type' =>'free_plan']);
             }
 
@@ -272,7 +272,7 @@ class ChargeController extends Controller
 
             if ($data['message'] === "success") {
 
-                Artisan::call('cache:clear');
+                Cache::tags('app-manager')->flush();
                 $userUpdateInfo = [$storePlanField => $request->plan, $storeGrandfathered => 0];
                 $shopify_fields = config('app-manager.field_names');
                 if(isset($shopify_fields['total_trial_days'])){
