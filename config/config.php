@@ -118,5 +118,18 @@ return [
     |-------------------------------------------
     */
 
-    'plan_route' => env('PLAN_PAGE_ROUTE', '/plans')
+    'plan_route' => env('PLAN_PAGE_ROUTE', '/plans'),
+
+    /*
+    |-------------------------------------------
+    | Cache driver
+    |-------------------------------------------
+    |
+    | Cache driver application is using
+    |
+    |-------------------------------------------
+    */
+
+    'cache_driver' => env('CACHE_DRIVER', 'redis'),
+
 ];

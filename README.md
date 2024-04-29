@@ -24,6 +24,9 @@ You can install the package via composer:
 ```bash
 composer require hulkapps/appmanager
 ```
+```bash
+composer dump-autoload
+```
 
 <a name="step3"></a>
 ### Configuration

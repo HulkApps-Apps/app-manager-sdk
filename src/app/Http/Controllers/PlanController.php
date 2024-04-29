@@ -6,9 +6,9 @@ use Carbon\Carbon;
 use HulkApps\AppManager\app\Traits\FailsafeHelper;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use function HulkApps\AppManager\app\appManagerCacheData;
+use function HulkApps\AppManager\app\deleteAppManagerCache;
 
 class PlanController extends Controller
 {
@@ -28,7 +28,7 @@ class PlanController extends Controller
         $shopifyPlanFieldName = config('app-manager.field_names.shopify_plan', 'shopify_plan');
         $cacheKey = $request->has('shop_domain') ? 'app-manager.plans-'.$request->get('shop_domain') : 'app-manager.all-plans';
 
-        $response = Cache::tags('app-manager')->rememberForever($cacheKey, function () use ($request, $shopTableName, $storeFieldName, $planFieldName, $shopifyPlanFieldName, $cacheKey) {
+        $response = appManagerCacheData($cacheKey, function () use ($request, $shopTableName, $storeFieldName, $planFieldName, $shopifyPlanFieldName, $cacheKey) {
             $shopify_plan = $plan = $plans = $trialActivatedAt = null;
             $choose_later = false;
 
@@ -148,8 +148,7 @@ class PlanController extends Controller
     }
 
     public function burstCache(Request $request) {
-
-        Cache::tags('app-manager')->flush();
+        deleteAppManagerCache();
         return true;
     }
 

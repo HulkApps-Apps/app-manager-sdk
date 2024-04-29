@@ -2,15 +2,16 @@
 
 namespace HulkApps\AppManager\app\Http\Controllers;
 
-use Carbon\Carbon;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Cache;
+use function HulkApps\AppManager\app\appManagerCacheData;
 
 class BannerController extends Controller
 {
     public function index() {
 
-        $banners = Cache::tags('app-manager')->rememberForever('app-manager.banners', function () {
+        $cacheKey = 'app-manager.banners';
+
+        $banners = appManagerCacheData($cacheKey, function () {
             return \AppManager::getBanners();
         });
 
