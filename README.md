@@ -14,7 +14,7 @@
 <a name="step1"></a>
 ### Requirements
 * SQLite
-* Redis Server for cache (will not work for file cache)
+* Redis Server for cache (File will work too, but not recommended)
 
 <a name="step2"></a>
 ### Installation
