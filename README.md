@@ -14,6 +14,7 @@
 <a name="step1"></a>
 ### Requirements
 * SQLite
+* Redis Server for cache (File will work too, but not recommended)
 
 <a name="step2"></a>
 ### Installation
@@ -22,6 +23,9 @@ You can install the package via composer:
 
 ```bash
 composer require hulkapps/appmanager
+```
+```bash
+composer dump-autoload
 ```
 
 <a name="step3"></a>

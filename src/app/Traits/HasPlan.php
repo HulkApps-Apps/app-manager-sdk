@@ -3,13 +3,15 @@
 namespace HulkApps\AppManager\app\Traits;
 
 use HulkApps\AppManager\Exception\MissingPlanException;
-use Illuminate\Support\Facades\Cache;
+use function HulkApps\AppManager\app\appManagerCacheData;
 
 trait HasPlan
 {
     public function hasPlanOld() {
         $shopify_fields = config('app-manager.field_names');
-        return Cache::tags('app-manager')->rememberForever('app-manager.has_plan_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at, function () use ($shopify_fields) {
+        $cacheKey = 'app-manager.has_plan_response_' . $this->{$shopify_fields['name']} . '_' . $this->updated_at;
+
+        return appManagerCacheData($cacheKey, function () use ($shopify_fields) {
             if ($this->{$shopify_fields['grandfathered']}) {
                 return true;
             }
@@ -23,6 +25,7 @@ trait HasPlan
             $activeCharge = \AppManager::getCharge($this->{$shopify_fields['name']});
             return $activeCharge['active_charge'] && count($activeCharge['active_charge']) > 0;
         });
+
     }
 
     public function hasPlan() {
@@ -30,7 +33,9 @@ trait HasPlan
         if (!$this->{$shopify_fields['plan_id']}) {
             return false;
         }
-        return Cache::tags('app-manager')->rememberForever('app-manager.has_plan_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at, function () use ($shopify_fields) {
+        $cacheKey = 'app-manager.has_plan_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at;
+
+        return appManagerCacheData($cacheKey, function () use ($shopify_fields) {
             $response = \AppManager::hasPlan([
                 'grandfathered' => $this->{$shopify_fields['grandfathered']},
                 'shop_domain' => $this->{$shopify_fields['name']},
@@ -43,7 +48,9 @@ trait HasPlan
 
     public function planFeatures() {
         $shopify_fields = config('app-manager.field_names');
-        return Cache::tags('app-manager')->rememberForever('app-manager.plan_feature_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at, function () use ($shopify_fields) {
+        $cacheKey = 'app-manager.plan_feature_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at;
+
+        return appManagerCacheData($cacheKey, function () use ($shopify_fields) {
             $planId = $this->{$shopify_fields['plan_id']};
 
             if (!$planId) {
@@ -85,7 +92,9 @@ trait HasPlan
 
     public function getRemainingDays() {
         $shopify_fields = config('app-manager.field_names');
-        return Cache::tags('app-manager')->rememberForever('app-manager.remaining_days_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at, function () use ($shopify_fields) {
+        $cacheKey = 'app-manager.remaining_days_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at;
+
+        return appManagerCacheData($cacheKey, function () use ($shopify_fields) {
 
             $shop_domain = $this->{$shopify_fields['name']};
 
@@ -97,8 +106,9 @@ trait HasPlan
 
     public function getPlanData($planId = null) {
         $shopify_fields = config('app-manager.field_names');
+        $cacheKey = 'app-manager.plan_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at;
 
-        return Cache::tags('app-manager')->rememberForever('app-manager.plan_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at, function () use ($shopify_fields, $planId) {
+        return appManagerCacheData($cacheKey, function () use ($shopify_fields, $planId) {
 
             if (!$planId) {
                 $planId = $this->{$shopify_fields['plan_id']};
@@ -110,7 +120,9 @@ trait HasPlan
     public function getChargeData() {
         $shopify_fields = config('app-manager.field_names');
         $shop_domain = $this->{$shopify_fields['name']};
-        return Cache::tags('app-manager')->rememberForever('app-manager.charges_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at, function () use ($shop_domain) {
+        $cacheKey = 'app-manager.charges_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at;
+
+        return appManagerCacheData($cacheKey, function () use ($shop_domain) {
             return \AppManager::getCharge($shop_domain);
         });
     }

@@ -2,12 +2,11 @@
 
 namespace HulkApps\AppManager;
 
-use Carbon\Carbon;
 use HulkApps\AppManager\app\Traits\FailsafeHelper;
 use HulkApps\AppManager\Client\Client;
-use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+use function HulkApps\AppManager\app\deleteAppManagerCache;
 
 
 class AppManager
@@ -216,7 +215,7 @@ class AppManager
         $discountCode = collect(explode('/', parse_url($url, PHP_URL_PATH)))->get(2, '');
 
         try {
-            Cache::tags('app-manager')->flush();
+            deleteAppManagerCache();
             $response = redirect()->to($destinationUrl. '?discount_code=' . $discountCode);
             return $response;
         }catch (\Exception $e) {

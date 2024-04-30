@@ -26,6 +26,9 @@
         "phpunit/phpunit": "^9.0"
     },
     "autoload": {
+        "files": [
+            "src/app/helpers.php"
+        ],
         "psr-4": {
             "HulkApps\\AppManager\\": "src"
         }
