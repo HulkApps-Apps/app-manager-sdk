@@ -121,7 +121,7 @@ class ChargeController extends Controller
             if($request->has('discount_code')){
                 $discountCode = $request->get('discount_code');
                 if (!empty($discountCode)) {
-                    $promotionalDiscount = \AppManager::getPromotionalDiscount($request->shop, $discountCode);
+                    $promotionalDiscount = \AppManager::getPromotionalDiscount($discountCode, $request->shop);
                 }
             }
 
