@@ -59,7 +59,7 @@ class AppManager
         }
     }
 
-    public function getPromotionalDiscount($shop_domain = null, $code) {
+    public function getPromotionalDiscount($code, $shop_domain = null) {
 
         try {
             $data = $this->client->get('discount', ['shop_domain' => $shop_domain, 'code' => $code]);
