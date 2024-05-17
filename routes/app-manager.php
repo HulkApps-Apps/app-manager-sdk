@@ -18,6 +18,7 @@ Route::prefix('api/app-manager')->as('app-manager.')->group(function () {
 
     Route::get('plan/process/callback', ChargeController::class.'@callback')->name('plan.callback');
     Route::get('plan/process/{plan_id}', ChargeController::class.'@process');
+    Route::get('cancel-charge', ChargeController::class.'@cancelCharge');
 
     Route::middleware('app-manager-api')->group(function (){
         Route::post('store-charge', ChargeController::class.'@storeCharge');

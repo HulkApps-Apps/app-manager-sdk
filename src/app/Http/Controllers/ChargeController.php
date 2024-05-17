@@ -300,4 +300,20 @@ class ChargeController extends Controller
 
         return \redirect()->route('home',$responseData);
     }
+
+    public function cancelCharge(Request $request)
+    {
+        $tableName = config('app-manager.shop_table_name', 'users');
+        $storeNameField = config('app-manager.field_names.name', 'name');
+
+        $shop = DB::table($tableName)->where($storeNameField, $request->shop)->first();
+
+        $apiVersion = config('app-manager.shopify_api_version');
+
+        if ($request->get('charge_id')) {
+            $storeTokenField = config('app-manager.field_names.shopify_token', 'shopify_token');
+            $charge = Client::withHeaders(["X-Shopify-Access-Token" => $shop->$storeTokenField])
+                ->delete("https://{$shop->$storeNameField}/admin/api/$apiVersion/recurring_application_charges/{$request->get('charge_id')}.json");
+        }
+    }
 }

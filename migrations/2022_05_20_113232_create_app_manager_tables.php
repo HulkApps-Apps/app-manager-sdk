@@ -45,6 +45,7 @@ class CreateAppManagerTables extends Migration
             $table->integer('external_charge_limit')->default(10000);
             $table->string('terms')->nullable();
 			$table->dateTime('deleted_at')->nullable();
+            $table->boolean('is_global')->default(false);
 			$table->timestamps();
 		});
 
