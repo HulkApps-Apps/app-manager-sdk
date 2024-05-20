@@ -316,4 +316,67 @@ class ChargeController extends Controller
                 ->delete("https://{$shop->$storeNameField}/admin/api/$apiVersion/recurring_application_charges/{$request->get('charge_id')}.json");
         }
     }
+
+    public function activateGlobalPlan(Request $request)
+    {
+        $tableName = config('app-manager.shop_table_name', 'users');
+        $storeNameField = config('app-manager.field_names.name', 'name');
+        $storePlanField = config('app-manager.field_names.plan_id', 'plan_id');
+        $storeTrialActivatedAtField = config('app-manager.field_names.trial_activated_at', 'trial_activated_at');
+
+        $shop = DB::table($tableName)->where($storeNameField, $request->shop)->first();
+
+        if ($shop) {
+            $plan = \AppManager::getPlan($request->plan_id, $request->shop);
+
+            $storeGrandfathered = config('app-manager.field_names.grandfathered', 'grandfathered');
+            $userUpdateInfo = [$storePlanField => $request->plan_id, $storeTrialActivatedAtField => null,$storeGrandfathered => 0];
+            $shopify_fields = config('app-manager.field_names');
+            if(isset($shopify_fields['total_trial_days'])){
+                $userUpdateInfo[$shopify_fields['total_trial_days']] = $plan['trial_days']?? 0;
+            }
+            $user = DB::table($tableName)->where($storeNameField, $request->shop)
+                ->update($userUpdateInfo);
+            try {
+                $plan['shop_domain'] = $request->shop;
+                $plan['old_plan'] = $request->old_plan ?? null;
+                event(new PlanActivated($plan, null, null));
+            } catch (\Exception $exception) {
+                report($exception);
+            }
+            deleteAppManagerCache();
+            return response()->json(['status' => true,'plan_type' =>'global_plan']);
+        }
+    }
+
+    public function cancelGlobalPlan(Request $request)
+    {
+        $tableName = config('app-manager.shop_table_name', 'users');
+        $storeNameField = config('app-manager.field_names.name', 'name');
+        $storePlanField = config('app-manager.field_names.plan_id', 'plan_id');
+        $storeTrialActivatedAtField = config('app-manager.field_names.trial_activated_at', 'trial_activated_at');
+        $storeShopifyPlanField = config('app-manager.field_names.shopify_plan', 'shopify_plan');
+
+        $shop = DB::table($tableName)->where($storeNameField, $request->shop)->first();
+
+        if ($shop) {
+            $storeGrandfathered = config('app-manager.field_names.grandfathered', 'grandfathered');
+            $userUpdateInfo = [$storePlanField => 0, $storeTrialActivatedAtField => null,$storeGrandfathered => 0];
+            $shopify_fields = config('app-manager.field_names');
+            if(isset($shopify_fields['total_trial_days'])){
+                $userUpdateInfo[$shopify_fields['total_trial_days']] =  0;
+            }
+            $user = DB::table($tableName)->where($storeNameField, $request->shop)
+                ->update($userUpdateInfo);
+            try {
+                $plan['shop_domain'] = $request->shop;
+                $plan['old_plan'] = $request->old_plan ?? null;
+                event(new PlanActivated($plan, null, null));
+            } catch (\Exception $exception) {
+                report($exception);
+            }
+            deleteAppManagerCache();
+            return response()->json(['status' => true,'plan_type' =>'cancel_plan']);
+        }
+    }
 }
