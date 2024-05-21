@@ -361,7 +361,7 @@ class ChargeController extends Controller
 
         if ($shop) {
             $storeGrandfathered = config('app-manager.field_names.grandfathered', 'grandfathered');
-            $userUpdateInfo = [$storePlanField => 0, $storeTrialActivatedAtField => null,$storeGrandfathered => 0];
+            $userUpdateInfo = [$storePlanField => null, $storeTrialActivatedAtField => null,$storeGrandfathered => 0];
             $shopify_fields = config('app-manager.field_names');
             if(isset($shopify_fields['total_trial_days'])){
                 $userUpdateInfo[$shopify_fields['total_trial_days']] =  0;
