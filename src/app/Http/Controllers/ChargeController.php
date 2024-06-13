@@ -345,8 +345,8 @@ class ChargeController extends Controller
                 report($exception);
             }
             deleteAppManagerCache();
-            return response()->json(['status' => true,'plan_type' =>'global_plan']);
         }
+        return response()->json(['status' => true,'plan_type' =>'global_plan']);
     }
 
     public function cancelGlobalPlan(Request $request)
@@ -355,7 +355,6 @@ class ChargeController extends Controller
         $storeNameField = config('app-manager.field_names.name', 'name');
         $storePlanField = config('app-manager.field_names.plan_id', 'plan_id');
         $storeTrialActivatedAtField = config('app-manager.field_names.trial_activated_at', 'trial_activated_at');
-        $storeShopifyPlanField = config('app-manager.field_names.shopify_plan', 'shopify_plan');
 
         $shop = DB::table($tableName)->where($storeNameField, $request->shop)->first();
 
@@ -369,7 +368,7 @@ class ChargeController extends Controller
             $user = DB::table($tableName)->where($storeNameField, $request->shop)
                 ->update($userUpdateInfo);
             deleteAppManagerCache();
-            return response()->json(['status' => true,'plan_type' =>'cancel_plan']);
         }
+        return response()->json(['status' => true,'plan_type' =>'cancel_plan']);
     }
 }
