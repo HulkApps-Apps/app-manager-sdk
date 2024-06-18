@@ -285,7 +285,7 @@ class ChargeController extends Controller
 
                 try {
                     event(new PlanActivated($plan, $charge, $chargeData['cancelled_charge'] ?? null));
-                    if (!empty($request->discount)) {
+                    if (!empty($request->discount) &&  !$plan['is_global']) {
                         if (empty($discountedPlans) || in_array($request->plan, $discountedPlans)) {
                             $discountApplied = \AppManager::discountUsed($shop->$storeName, $request->discount);
                         }
