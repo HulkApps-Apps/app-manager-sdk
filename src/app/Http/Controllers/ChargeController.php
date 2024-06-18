@@ -138,7 +138,7 @@ class ChargeController extends Controller
                     $discount['durationLimitInIntervals'] = (int)$plan['cycle_count'];
                 }
             }elseif ($promotionalDiscount){
-                if($promotionalDiscount['plan_relation'] && !in_array($plan['id'], $promotionalDiscount['plan_relation'])){
+                if(($promotionalDiscount['plan_relation'] && !in_array($plan['id'], $promotionalDiscount['plan_relation'])) || $plan['is_global']){
                     $discount = [];
                 }
                 else{
