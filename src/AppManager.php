@@ -59,6 +59,18 @@ class AppManager
         }
     }
 
+    public function getAppBundleData()
+    {
+        try {
+            $data = $this->client->get('app-bundle-data');
+            return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : [];
+        }
+        catch (\Exception $e) {
+            report($e);
+            //return $this->prepareAppBundleData();
+        }
+    }
+
     public function checkAndActivateGlobalPlan($shop_domain) {
 
         try {
