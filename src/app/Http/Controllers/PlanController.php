@@ -29,7 +29,7 @@ class PlanController extends Controller
         $cacheKey = $request->has('shop_domain') ? 'app-manager.plans-'.$request->get('shop_domain') : 'app-manager.all-plans';
 
         $response = appManagerCacheData($cacheKey, function () use ($request, $shopTableName, $storeFieldName, $planFieldName, $shopifyPlanFieldName, $cacheKey) {
-            $shopify_plan = $plan = $plans = $trialActivatedAt = null;
+            $shopify_plan = $plan = $globalPlan = $plans = $trialActivatedAt = null;
             $choose_later = false;
 
             if ($request->has('shop_domain')) {
@@ -39,6 +39,7 @@ class PlanController extends Controller
                 $activePlanId = collect($userData)->pluck($planFieldName)->first() ?? null;
                 $plans = \AppManager::getPlans($shopDomain, $activePlanId);
                 $plan = collect($plans)->where('id', $activePlanId)->first();
+                $globalPlan = collect($plans)->where('is_global', 1)->first();
 
                 $trialActivatedAt = collect($userData)->pluck(config('app-manager.field_names.trial_activated_at', 'trial_activated_at'))->first() ?? null;
                 $activeCharge = \AppManager::getCharge($shopDomain);
@@ -72,11 +73,15 @@ class PlanController extends Controller
                 }
             }
 
+            $appBundleData = \AppManager::getAppBundleData();
+
             return [
                 'plans' => $plans,
                 'promotional_discount' => $promotionalDiscount,
                 'shopify_plan' => $shopify_plan,
                 'plan' => $plan,
+                'bundle_plan' => $globalPlan,
+                'bundle_details' => $appBundleData,
                 'default_plan_id' => $defaultPlanId,
                 'choose_later' => $choose_later,
                 'has_active_charge' => (isset($activeCharge['active_charge']) && !empty($activeCharge['active_charge'])) || !$trialActivatedAt
