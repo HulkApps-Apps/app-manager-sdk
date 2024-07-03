@@ -75,11 +75,10 @@ class AppManager
 
         try {
             $data = $this->client->post('activate-global-plan', ['shop_domain' => $shop_domain]);
-            return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->preparePlan(['shop_domain' => $shop_domain]);
+            return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : [];
         }
         catch (\Exception $e) {
             report($e);
-           // return $this->preparePlan(['shop_domain' => $shop_domain]);
         }
     }
 
