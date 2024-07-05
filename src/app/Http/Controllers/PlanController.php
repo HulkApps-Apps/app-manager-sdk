@@ -39,7 +39,7 @@ class PlanController extends Controller
                 $activePlanId = collect($userData)->pluck($planFieldName)->first() ?? null;
                 $plans = \AppManager::getPlans($shopDomain, $activePlanId);
                 $plan = collect($plans)->where('id', $activePlanId)->first();
-                $globalPlan = collect($plans)->where('is_global', 1)->first();
+                $globalPlan = collect($plans)->where('is_global', 1)->first() ?? null;
 
                 $trialActivatedAt = collect($userData)->pluck(config('app-manager.field_names.trial_activated_at', 'trial_activated_at'))->first() ?? null;
                 $activeCharge = \AppManager::getCharge($shopDomain);
