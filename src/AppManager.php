@@ -67,7 +67,6 @@ class AppManager
         }
         catch (\Exception $e) {
             report($e);
-            //return $this->prepareAppBundleData();
         }
     }
 
