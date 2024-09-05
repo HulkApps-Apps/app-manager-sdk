@@ -367,6 +367,16 @@ class ChargeController extends Controller
             }
             $user = DB::table($tableName)->where($storeNameField, $request->shop)
                 ->update($userUpdateInfo);
+            if($request->free_plan_id){
+                $plan = \AppManager::getPlan($request->free_plan_id, $request->shop);
+                try {
+                    $plan['shop_domain'] = $request->shop;
+                    $plan['old_plan'] = $request->old_plan ?? null;
+                    event(new PlanActivated($plan, null, null));
+                } catch (\Exception $exception) {
+                    report($exception);
+                }
+            }
             deleteAppManagerCache();
         }
         return response()->json(['status' => true,'plan_type' =>'cancel_plan']);
