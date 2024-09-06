@@ -360,13 +360,23 @@ class ChargeController extends Controller
 
         if ($shop) {
             $storeGrandfathered = config('app-manager.field_names.grandfathered', 'grandfathered');
-            $userUpdateInfo = [$storePlanField => null, $storeTrialActivatedAtField => null,$storeGrandfathered => 0];
+            $userUpdateInfo = [$storePlanField => $request->free_plan_id ?? null, $storeTrialActivatedAtField => null,$storeGrandfathered => 0];
             $shopify_fields = config('app-manager.field_names');
             if(isset($shopify_fields['total_trial_days'])){
                 $userUpdateInfo[$shopify_fields['total_trial_days']] =  0;
             }
             $user = DB::table($tableName)->where($storeNameField, $request->shop)
                 ->update($userUpdateInfo);
+            if($request->free_plan_id){
+                $plan = \AppManager::getPlan($request->free_plan_id, $request->shop);
+                try {
+                    $plan['shop_domain'] = $request->shop;
+                    $plan['old_plan'] = $request->old_plan ?? null;
+                    event(new PlanActivated($plan, null, null));
+                } catch (\Exception $exception) {
+                    report($exception);
+                }
+            }
             deleteAppManagerCache();
         }
         return response()->json(['status' => true,'plan_type' =>'cancel_plan']);
