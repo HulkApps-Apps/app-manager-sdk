@@ -337,10 +337,11 @@ class ChargeController extends Controller
             }
             $user = DB::table($tableName)->where($storeNameField, $request->shop)
                 ->update($userUpdateInfo);
+            $chargeData = \AppManager::getCharge($request->shop);
             try {
                 $plan['shop_domain'] = $request->shop;
                 $plan['old_plan'] = $request->old_plan ?? null;
-                event(new PlanActivated($plan, null, null));
+                event(new PlanActivated($plan, $chargeData['bundle_charge'], $chargeData['cancelled_charge']));
             } catch (\Exception $exception) {
                 report($exception);
             }
