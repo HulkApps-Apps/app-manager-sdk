@@ -192,13 +192,17 @@ class ChargeController extends Controller
                                     'amount' => $plan['price'],
                                     'currencyCode' => 'USD',
                                 ],
-                                'discount' => $discount,
+                                //'discount' => $discount,
                                 'interval' => $plan['interval']['value'],
                             ]),
                         ],
                     ],
                 ],
             ];
+
+            if(!empty($discount)){
+                $variables['lineItems'][0]['plan']['appRecurringPricingDetails']['discount'] = $discount;
+            }
 
             //allow to add additional charge
             if($plan['interval']['value'] == 'EVERY_30_DAYS' && isset($plan['is_external_charge']) && $plan['is_external_charge']){
