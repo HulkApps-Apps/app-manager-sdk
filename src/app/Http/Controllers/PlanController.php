@@ -158,7 +158,6 @@ class PlanController extends Controller
     }
 
     public function failSafeBackup(Request $request) {
-
         // sync pending charges with app manager
         try {
             $this->syncAppManager();
@@ -185,31 +184,40 @@ class PlanController extends Controller
             $plans[$index]['feature_plan'] = $plans[$index]['features'];
             unset($plans[$index]['features']);
         }
-        DB::connection('app-manager-failsafe')->table('plans')->insert($plans);
+        //DB::connection('app-manager-failsafe')->table('plans')->insert($plans);
+        $this->batchInsert('plans', $plans);
 
         $charges = $this->filterData($data['charges'],$commanFields);
-        DB::connection('app-manager-failsafe')->table('charges')->insert($charges);
+        //DB::connection('app-manager-failsafe')->table('charges')->insert($charges);
+        $this->batchInsert('charges', $charges);
 
         $discount_plans = $this->filterData($data['discount_plans'],$commanFields);
-        DB::connection('app-manager-failsafe')->table('discount_plan')->insert($discount_plans);
+        //DB::connection('app-manager-failsafe')->table('discount_plan')->insert($discount_plans);
+        $this->batchInsert('discount_plan', $discount_plans);
 
         $extend_trials = $this->filterData($data['extend_trials'],$commanFields);
-        DB::connection('app-manager-failsafe')->table('trial_extension')->insert($extend_trials);
+        //DB::connection('app-manager-failsafe')->table('trial_extension')->insert($extend_trials);
+        $this->batchInsert('trial_extension', $extend_trials);
 
         $plan_users = $this->filterData($data['plan_users'],$commanFields);
-        DB::connection('app-manager-failsafe')->table('plan_user')->insert($plan_users);
+        //DB::connection('app-manager-failsafe')->table('plan_user')->insert($plan_users);
+        $this->batchInsert('plan_user', $plan_users);
 
         $promotional_discounts = $this->filterData($data['promotional_discounts'],['valid_from','valid_to','created_at', 'updated_at','deleted_at']);
-        DB::connection('app-manager-failsafe')->table('discounts')->insert($promotional_discounts);
+        //DB::connection('app-manager-failsafe')->table('discounts')->insert($promotional_discounts);
+        $this->batchInsert('discounts', $promotional_discounts);
 
         $promotional_discounts_shops = $data['promotional_discounts_shops'];
-        DB::connection('app-manager-failsafe')->table('discount_shops')->insert($promotional_discounts_shops);
+        //DB::connection('app-manager-failsafe')->table('discount_shops')->insert($promotional_discounts_shops);
+        $this->batchInsert('discount_shops', $promotional_discounts_shops);
 
         $promotional_discounts_plans = $data['promotional_discounts_plans'];
-        DB::connection('app-manager-failsafe')->table('discount_plans')->insert($promotional_discounts_plans);
+        //DB::connection('app-manager-failsafe')->table('discount_plans')->insert($promotional_discounts_plans);
+        $this->batchInsert('discount_plans', $promotional_discounts_plans);
 
         $promotional_discounts_usage_log = $this->filterData($data['promotional_discounts_usage_log'],$commanFields);
-        DB::connection('app-manager-failsafe')->table('discounts_usage_log')->insert($promotional_discounts_usage_log);
+        //DB::connection('app-manager-failsafe')->table('discounts_usage_log')->insert($promotional_discounts_usage_log);
+        $this->batchInsert('discounts_usage_log', $promotional_discounts_usage_log);
     }
 
     public function filterData($data,$fields = []) {
@@ -224,6 +232,22 @@ class PlanController extends Controller
             return collect($value)->forget('app_id')->toArray();
         })->toArray();
         return $data;
+    }
+
+
+    public function batchInsert($table, $data, $batchSize = 50) {
+        if(empty($data)){
+            return;
+        }
+        $connection = DB::connection('app-manager-failsafe');
+        try {
+            $chunks = array_chunk($data, $batchSize);
+            foreach ($chunks as $chunk) {
+                $connection->table($table)->insert($chunk);
+            }
+        } finally {
+            DB::disconnect('app-manager-failsafe');
+        }
     }
 
 }
