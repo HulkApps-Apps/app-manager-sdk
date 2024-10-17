@@ -90,7 +90,7 @@ class PlanController extends Controller
                 'default_plan_id' => $defaultPlanId,
                 'choose_later' => $choose_later,
                 'has_active_charge' => (isset($activeCharge['active_charge']) && !empty($activeCharge['active_charge'])) || !$trialActivatedAt,
-                'global_plan_charge' => isset($plan) && $plan['is_global'] && (isset($activeCharge['active_charge']) && !empty($activeCharge['active_charge']) && !empty($activeCharge['bundle_charge'])),
+                'global_plan_charge' => !empty($plan) && $plan['is_global'] && (isset($activeCharge['active_charge']) && !empty($activeCharge['active_charge']) && !empty($activeCharge['bundle_charge'])),
             ];
         });
 
