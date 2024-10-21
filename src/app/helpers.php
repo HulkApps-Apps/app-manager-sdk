@@ -19,12 +19,7 @@ if (! function_exists('appManagerCacheData')) {
 if (! function_exists('deleteAppManagerCache')) {
     function deleteAppManagerCache() {
         $cacheDriver = config('app-manager.cache_driver');
-
-        if ($cacheDriver === 'redis') {
-                Cache::tags('app-manager')->flush();
-        } else {
-            Cache::flush();
-        }
+        ($cacheDriver === 'file')? Cache::flush() : Cache::tags('app-manager')->flush();
     }
 
 }
