@@ -39,10 +39,10 @@ class PlanController extends Controller
                 $activePlanId = collect($userData)->pluck($planFieldName)->first() ?? null;
                 $plans = \AppManager::getPlans($shopDomain, $activePlanId);
                 $plan = collect($plans)->where('id', $activePlanId)->first();
-                $globalPlan = collect($plans)->where('is_global', 1)->first() ?? null;
-
                 $trialActivatedAt = collect($userData)->pluck(config('app-manager.field_names.trial_activated_at', 'trial_activated_at'))->first() ?? null;
                 $activeCharge = \AppManager::getCharge($shopDomain);
+                if(empty($plan) && !empty($activeCharge['bundle_charge']))
+                    $plan = \AppManager::getBundlePlan($activePlanId);
                 if (empty($activeCharge['cancelled_charge']) && empty($activeCharge['active_charge']) && !$trialActivatedAt && !$plan) {
                     $choose_later = true;
                 }
@@ -73,6 +73,11 @@ class PlanController extends Controller
                 }
             }
 
+            if(!empty($plan) && $plan['is_global']){
+                $bundlePlan = $plan;
+            }else
+                $bundlePlan = \AppManager::getBundlePlan();
+
             $appBundleData = \AppManager::getAppBundleData();
 
             return [
@@ -80,11 +85,12 @@ class PlanController extends Controller
                 'promotional_discount' => $promotionalDiscount,
                 'shopify_plan' => $shopify_plan,
                 'plan' => $plan,
-                'bundle_plan' => $globalPlan,
+                'bundle_plan' => $bundlePlan,
                 'bundle_details' => $appBundleData,
                 'default_plan_id' => $defaultPlanId,
                 'choose_later' => $choose_later,
-                'has_active_charge' => (isset($activeCharge['active_charge']) && !empty($activeCharge['active_charge'])) || !$trialActivatedAt
+                'has_active_charge' => (isset($activeCharge['active_charge']) && !empty($activeCharge['active_charge'])) || !$trialActivatedAt,
+                'global_plan_charge' => !empty($plan) && $plan['is_global'] && (isset($activeCharge['active_charge']) && !empty($activeCharge['active_charge']) && !empty($activeCharge['bundle_charge'])),
             ];
         });
 

@@ -59,6 +59,17 @@ class AppManager
         }
     }
 
+    public function getBundlePlan($activePlanId = null)
+    {
+        try {
+            $data = $this->client->get('get-bundle-plan', ['active_plan_id' => $activePlanId]);
+            return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : [];
+        }
+        catch (\Exception $e) {
+            report($e);
+        }
+    }
+
     public function getAppBundleData()
     {
         try {
