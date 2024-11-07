@@ -205,7 +205,7 @@ class PlanController extends Controller
         $plan_users = $this->filterData($data['plan_users'],$commanFields);
         DB::connection('app-manager-failsafe')->table('plan_user')->insert($plan_users);
 
-        $promotional_discounts = $this->filterData($data['promotional_discounts'],['valid_from','valid_to','created_at', 'updated_at','deleted_at']);
+        $promotional_discounts = $this->filterData($data['promotional_discounts'],['valid_from','valid_to','created_at', 'updated_at','deleted_at'], false);
         DB::connection('app-manager-failsafe')->table('discounts')->insert($promotional_discounts);
 
         $promotional_discounts_shops = $data['promotional_discounts_shops'];
@@ -214,12 +214,12 @@ class PlanController extends Controller
         $promotional_discounts_plans = $data['promotional_discounts_plans'];
         DB::connection('app-manager-failsafe')->table('discount_plans')->insert($promotional_discounts_plans);
 
-        $promotional_discounts_usage_log = $this->filterData($data['promotional_discounts_usage_log'],$commanFields);
+        $promotional_discounts_usage_log = $this->filterData($data['promotional_discounts_usage_log'],$commanFields, false);
         DB::connection('app-manager-failsafe')->table('discounts_usage_log')->insert($promotional_discounts_usage_log);
     }
 
-    public function filterData($data,$fields = []) {
-        $data = collect($data)->map(function ($value, $key) use ($fields){
+    public function filterData($data,$fields = [], $forgetAppId = true) {
+        $data = collect($data)->map(function ($value, $key) use ($fields, $forgetAppId){
             if(!empty($fields)){
                 foreach($fields as $field){
                     if(isset($value[$field])){
@@ -227,7 +227,7 @@ class PlanController extends Controller
                     }
                 }
             }
-            return collect($value)->forget('app_id')->toArray();
+            return $forgetAppId ? collect($value)->forget('app_id')->toArray() : $value;
         })->toArray();
         return $data;
     }
