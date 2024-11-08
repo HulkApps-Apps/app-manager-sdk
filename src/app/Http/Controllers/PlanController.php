@@ -39,10 +39,10 @@ class PlanController extends Controller
                 $activePlanId = collect($userData)->pluck($planFieldName)->first() ?? null;
                 $plans = \AppManager::getPlans($shopDomain, $activePlanId);
                 $plan = collect($plans)->where('id', $activePlanId)->first();
-                $globalPlan = collect($plans)->where('is_global', 1)->first() ?? null;
-
                 $trialActivatedAt = collect($userData)->pluck(config('app-manager.field_names.trial_activated_at', 'trial_activated_at'))->first() ?? null;
                 $activeCharge = \AppManager::getCharge($shopDomain);
+                if(empty($plan) && !empty($activeCharge['bundle_charge']))
+                    $plan = \AppManager::getBundlePlan($activePlanId);
                 if (empty($activeCharge['cancelled_charge']) && empty($activeCharge['active_charge']) && !$trialActivatedAt && !$plan) {
                     $choose_later = true;
                 }
@@ -73,6 +73,11 @@ class PlanController extends Controller
                 }
             }
 
+            if(!empty($plan) && $plan['is_global']){
+                $bundlePlan = $plan;
+            }else
+                $bundlePlan = \AppManager::getBundlePlan();
+
             $appBundleData = \AppManager::getAppBundleData();
 
             return [
@@ -80,11 +85,12 @@ class PlanController extends Controller
                 'promotional_discount' => $promotionalDiscount,
                 'shopify_plan' => $shopify_plan,
                 'plan' => $plan,
-                'bundle_plan' => $globalPlan,
+                'bundle_plan' => $bundlePlan,
                 'bundle_details' => $appBundleData,
                 'default_plan_id' => $defaultPlanId,
                 'choose_later' => $choose_later,
-                'has_active_charge' => (isset($activeCharge['active_charge']) && !empty($activeCharge['active_charge'])) || !$trialActivatedAt
+                'has_active_charge' => (isset($activeCharge['active_charge']) && !empty($activeCharge['active_charge'])) || !$trialActivatedAt,
+                'global_plan_charge' => !empty($plan) && $plan['is_global'] && (isset($activeCharge['active_charge']) && !empty($activeCharge['active_charge']) && !empty($activeCharge['bundle_charge'])),
             ];
         });
 
@@ -203,7 +209,7 @@ class PlanController extends Controller
         //DB::connection('app-manager-failsafe')->table('plan_user')->insert($plan_users);
         $this->batchInsert('plan_user', $plan_users);
 
-        $promotional_discounts = $this->filterData($data['promotional_discounts'],['valid_from','valid_to','created_at', 'updated_at','deleted_at']);
+        $promotional_discounts = $this->filterData($data['promotional_discounts'],['valid_from','valid_to','created_at', 'updated_at','deleted_at'],false);
         //DB::connection('app-manager-failsafe')->table('discounts')->insert($promotional_discounts);
         $this->batchInsert('discounts', $promotional_discounts);
 
@@ -215,13 +221,13 @@ class PlanController extends Controller
         //DB::connection('app-manager-failsafe')->table('discount_plans')->insert($promotional_discounts_plans);
         $this->batchInsert('discount_plans', $promotional_discounts_plans);
 
-        $promotional_discounts_usage_log = $this->filterData($data['promotional_discounts_usage_log'],$commanFields);
+        $promotional_discounts_usage_log = $this->filterData($data['promotional_discounts_usage_log'],$commanFields,false);
         //DB::connection('app-manager-failsafe')->table('discounts_usage_log')->insert($promotional_discounts_usage_log);
         $this->batchInsert('discounts_usage_log', $promotional_discounts_usage_log);
     }
 
-    public function filterData($data,$fields = []) {
-        $data = collect($data)->map(function ($value, $key) use ($fields){
+    public function filterData($data,$fields = [], $forgetAppId = true) {
+        $data = collect($data)->map(function ($value, $key) use ($fields, $forgetAppId){
             if(!empty($fields)){
                 foreach($fields as $field){
                     if(isset($value[$field])){
@@ -229,7 +235,7 @@ class PlanController extends Controller
                     }
                 }
             }
-            return collect($value)->forget('app_id')->toArray();
+            return $forgetAppId ? collect($value)->forget('app_id')->toArray() : $value;
         })->toArray();
         return $data;
     }
