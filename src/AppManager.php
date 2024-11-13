@@ -242,6 +242,15 @@ class AppManager
         }
     }
 
+    public function deleteAppManagerCache() {
+        try {
+            deleteAppManagerCache();
+        }
+        catch (\Exception $e) {
+            report($e);
+        }
+    }
+
     public function saveToLocalStorage($destinationUrl)
     {
         $url = url()->current();
