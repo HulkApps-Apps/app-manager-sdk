@@ -97,6 +97,14 @@ class PlanController extends Controller
         return response()->json($response);
     }
 
+    public function addons(Request $request) {
+        $cacheKey = 'app-manager.addons';
+        $addons = appManagerCacheData($cacheKey, function () {
+            return \AppManager::getAddons();
+        });
+        return response($addons, 200);
+    }
+
     public function users(Request $request) {
 
         $data = $request->all();
@@ -224,6 +232,9 @@ class PlanController extends Controller
         $promotional_discounts_usage_log = $this->filterData($data['promotional_discounts_usage_log'],$commanFields,false);
         //DB::connection('app-manager-failsafe')->table('discounts_usage_log')->insert($promotional_discounts_usage_log);
         $this->batchInsert('discounts_usage_log', $promotional_discounts_usage_log);
+
+        $addons = $this->filterData($data['addons'],$commanFields);
+        $this->batchInsert('addons', $addons);
     }
 
     public function filterData($data,$fields = [], $forgetAppId = true) {

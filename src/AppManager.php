@@ -265,4 +265,19 @@ class AppManager
         }
     }
 
+
+    public function getAddons($status = null) {
+        try {
+            $payload = [];
+            if ($status) {
+                $payload['status'] = $status;
+            }
+            $data = $this->client->get('addons', $payload);
+            return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->prepareAddons($status);
+        }
+        catch (\Exception $e) {
+            report($e);
+            return $this->prepareAddons($status);
+        }
+    }
 }

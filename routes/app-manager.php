@@ -11,6 +11,7 @@ Route::prefix('api/app-manager')->as('app-manager.')->group(function () {
 
     Route::get('plan-features', PlanController::class.'@index');
     Route::get('plans', PlanController::class.'@plans');
+    Route::get('addons', PlanController::class.'@addons');
     Route::get('users', PlanController::class.'@users');
     Route::post('active-without-plan', PlanController::class.'@activeWithoutPlan');
     Route::post('burst-cache', PlanController::class.'@burstCache');

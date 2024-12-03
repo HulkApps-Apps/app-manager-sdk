@@ -413,4 +413,14 @@ trait FailsafeHelper {
 
         return ['has_plan' => false];
     }
+
+    public function prepareAddons($status){
+        $addons = DB::connection('app-manager-failsafe')->table('addons');
+        if($status && $status != 'all') {
+            $addons = $status->where('is_public', ($status == 'public'));
+        }else{
+            $addons = $addons->where('is_public', 1);
+        }
+        return $addons->get()->toArray();
+    }
 }

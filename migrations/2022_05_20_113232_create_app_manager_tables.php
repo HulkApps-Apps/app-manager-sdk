@@ -139,6 +139,16 @@ class CreateAppManagerTables extends Migration
             $table->unsignedBigInteger('discount_id')->index();
             $table->bigInteger('plan_id')->index();
         });
+
+        Schema::create('addons', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('descriptions')->nullable();
+            $table->double('price', 8, 2);
+            $table->json('extra_data')->nullable();
+            $table->boolean('is_public')->default(true);
+            $table->timestamps();
+        });
     }
 
 	/**
@@ -158,5 +168,6 @@ class CreateAppManagerTables extends Migration
 		Schema::dropIfExists('discount_shops');
 		Schema::dropIfExists('discounts_usage_log');
 		Schema::dropIfExists('discount_plans');
+		Schema::dropIfExists('addons');
 	}
 }
