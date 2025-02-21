@@ -29,4 +29,12 @@ if (! function_exists('deleteAppManagerCache')) {
 
 }
 
+if (! function_exists('isValidUser')) {
+    function isValidUser($request) {
+        $secret = config('app-manager.secret');
+        $requestSecret = $request->header('token');
+        return $secret === $requestSecret;
+    }
+}
+
 
