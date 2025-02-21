@@ -99,9 +99,6 @@ class PlanController extends Controller
     }
 
     public function users(Request $request) {
-        if (!isValidUser($request)) {
-            return response()->json(['message' => 'Unauthorized'], 401);
-        }
         $data = $request->all();
         $tableName = config('app-manager.shop_table_name', 'users');
         $shopify_fields = config('app-manager.field_names');
