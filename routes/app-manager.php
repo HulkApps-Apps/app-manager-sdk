@@ -11,7 +11,6 @@ Route::prefix('api/app-manager')->as('app-manager.')->group(function () {
 
     Route::get('plan-features', PlanController::class.'@index');
     Route::get('plans', PlanController::class.'@plans');
-    Route::get('users', PlanController::class.'@users');
     Route::post('active-without-plan', PlanController::class.'@activeWithoutPlan');
     Route::post('burst-cache', PlanController::class.'@burstCache');
     Route::post('fail-safe-backup', PlanController::class.'@failSafeBackup');
@@ -23,6 +22,7 @@ Route::prefix('api/app-manager')->as('app-manager.')->group(function () {
     Route::post('plan/cancel-global', ChargeController::class.'@cancelGlobalPlan');
 
     Route::middleware('app-manager-api')->group(function (){
+        Route::get('users', PlanController::class.'@users');
         Route::post('store-charge', ChargeController::class.'@storeCharge');
     });
 });
