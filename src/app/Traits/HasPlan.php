@@ -48,14 +48,19 @@ trait HasPlan
 
     public function planFeatures() {
         $shopify_fields = config('app-manager.field_names');
-        $cacheKey = 'app-manager.plan_feature_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at;
+        $planId = $this->{$shopify_fields['plan_id']};
+        if (!$planId) {
+            return [];
+        }
+        //$cacheKey = 'app-manager.plan_feature_response_'.$this->{$shopify_fields['name']} . '_' . $this->updated_at;
+        $cacheKey = 'app-manager.plan_feature_response_'.$planId;
 
-        return appManagerCacheData($cacheKey, function () use ($shopify_fields) {
-            $planId = $this->{$shopify_fields['plan_id']};
-
-            if (!$planId) {
-                return [];
-            }
+        return appManagerCacheData($cacheKey, function () use ($planId) {
+//            $planId = $this->{$shopify_fields['plan_id']};
+//
+//            if (!$planId) {
+//                return [];
+//            }
 
             $planData = \AppManager::getPlan($planId);
 
