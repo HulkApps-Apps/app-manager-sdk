@@ -80,6 +80,7 @@ return [
         'created_at' => env('CREATED_AT', 'created_at'), // 2022-04-15 10:43:05
         'trial_activated_at' => env('TRIAL_ACTIVATED_AT', 'trial_activated_at'), // 2022-04-15 10:43:05
         'grandfathered' => env('GRAND_FATHERED', 'grandfathered'), // true
+        'partner_development' => env('PARTNER_DEVELOPMENT', 'partner_development'), // true
     ],
 
     /*
