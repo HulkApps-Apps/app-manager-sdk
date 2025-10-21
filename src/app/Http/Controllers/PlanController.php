@@ -23,13 +23,24 @@ class PlanController extends Controller
 
     public function plans(Request $request) {
 
+        $mostPopularPlanIdsRaw = config('app-manager.most_popular_plan_ids', []);
+        $mostPopularPlanIds = [];
+        if (!empty($mostPopularPlanIdsRaw) && is_array($mostPopularPlanIdsRaw)) {
+            foreach ($mostPopularPlanIdsRaw as $v) {
+                if ($v !== '' && is_numeric($v)) {
+                    $mostPopularPlanIds[] = (int) $v;
+                }
+            }
+            $mostPopularPlanIds = array_values(array_unique($mostPopularPlanIds));
+        }
+
         $shopTableName = config('app-manager.shop_table_name', 'users');
         $storeFieldName = config('app-manager.field_names.name', 'name');
         $planFieldName = config('app-manager.field_names.plan_id', 'plan_id');
         $shopifyPlanFieldName = config('app-manager.field_names.shopify_plan', 'shopify_plan');
         $cacheKey = $request->has('shop_domain') ? 'app-manager.plans-'.$request->get('shop_domain') : 'app-manager.all-plans';
 
-        $response = appManagerCacheData($cacheKey, function () use ($request, $shopTableName, $storeFieldName, $planFieldName, $shopifyPlanFieldName, $cacheKey) {
+        $response = appManagerCacheData($cacheKey, function () use ($request, $shopTableName, $storeFieldName, $planFieldName, $shopifyPlanFieldName, $cacheKey, $mostPopularPlanIds) {
             $shopify_plan = $plan = $globalPlan = $plans = $trialActivatedAt = null;
             $choose_later = false;
 
@@ -89,6 +100,7 @@ class PlanController extends Controller
                 'bundle_plan' => $bundlePlan,
                 'bundle_details' => $appBundleData,
                 'default_plan_id' => $defaultPlanId,
+                'most_popular_plan_ids' => $mostPopularPlanIds,
                 'choose_later' => $choose_later,
                 'has_active_charge' => (isset($activeCharge['active_charge']) && !empty($activeCharge['active_charge'])) || !$trialActivatedAt,
                 'global_plan_charge' => !empty($plan) && isset($plan['is_global']) && $plan['is_global'] && (isset($activeCharge['active_charge']) && !empty($activeCharge['active_charge']) && !empty($activeCharge['bundle_charge'])),

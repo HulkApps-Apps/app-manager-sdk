@@ -133,4 +133,16 @@ return [
 
     'cache_driver' => env('CACHE_DRIVER', 'redis'),
 
+    /*
+    |-------------------------------------------
+    | Most Popular plan IDs
+    |-------------------------------------------
+    |
+    | Array of plan IDs (integers) to mark as most popular plans.
+    | Must be an array of integers (e.g. [100,102]). Do not use a comma-separated string.
+    |
+    |-------------------------------------------
+    */
+    'most_popular_plan_ids' => [],
+
 ];
