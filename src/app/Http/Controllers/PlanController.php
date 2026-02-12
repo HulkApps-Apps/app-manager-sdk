@@ -175,7 +175,100 @@ class PlanController extends Controller
         return true;
     }
 
-    public function failSafeBackup(Request $request) {
+    public function failSafeBackup(Request $request)
+    {
+        // sync pending charges with app manager
+        try {
+            $this->syncAppManager();
+        }
+        catch (\Exception $e) {
+            report($e);
+        }
+
+        $syncType = $request->input('sync_type');
+        $payload  = $request->input('payload');
+
+        $this->initializeFailsafeDB();
+
+        $commanFields = ['created_at', 'updated_at', 'deleted_at', 'valid_from', 'valid_to'];
+
+        switch ($syncType) {
+            case 'plans':
+                if (isset($payload['features'])) {
+                    $payload['feature_plan'] = $payload['features'];
+                    unset($payload['features']);
+                }
+                $cleanData = $this->filterData($payload, $commanFields);
+                DB::connection('app-manager-failsafe')->table('plans')->updateOrInsert(['id' => $cleanData['id']], $cleanData);
+                break;
+
+            case 'plan_delete':
+                DB::connection('app-manager-failsafe')->table('plans')->where('id', $payload['id'])->delete();
+                break;
+
+            case 'extend-trial':
+                $cleanData = $this->filterData($payload, $commanFields);
+                DB::connection('app-manager-failsafe')->table('trial_extension')->updateOrInsert(
+                    ['id' => $cleanData['id']],
+                    $cleanData
+                );
+                break;
+
+            case 'charges':
+                $cleanData = $this->filterData($payload, $commanFields);
+                DB::connection('app-manager-failsafe')->table('charges')->updateOrInsert(
+                    ['id' => $cleanData['id']],
+                    $cleanData
+                );
+                break;
+
+            case 'discounts':
+
+                $cleanData = $this->filterData($payload, $commanFields);
+                DB::connection('app-manager-failsafe')->table('discounts')->updateOrInsert(
+                    ['id' => $cleanData['id']],
+                    $cleanData
+                );
+                break;
+
+            case 'plan_discount':
+                $cleanData = $this->filterData($payload, $commanFields);
+                DB::connection('app-manager-failsafe')->table('discount_plan')->updateOrInsert(
+                    ['id' => $cleanData['id']],
+                    $cleanData
+                );
+                break;
+
+            case 'plan_user':
+                $cleanData = $this->filterData($payload, $commanFields);
+                DB::connection('app-manager-failsafe')->table('plan_user')->updateOrInsert(
+                    ['id' => $cleanData['id']],
+                    $cleanData
+                );
+                break;
+
+            case 'plan_user_delete':
+                DB::connection('app-manager-failsafe')->table('plan_user')->where('id', $payload['id'])->delete();
+                break;
+
+            case 'app_structures':
+                DB::connection('app-manager-failsafe')->table('marketing_banners')->updateOrInsert(
+                    ['id' => 1],
+                    ['marketing_banners' => json_encode($payload)]
+                );
+                break;
+
+            default:
+                $cleanData = $this->filterData($payload);
+                DB::connection('app-manager-failsafe')->table($syncType)->updateOrInsert(
+                    ['id' => $cleanData['id']],
+                    $cleanData
+                );
+                break;
+        }
+    }
+
+    public function failSafeBackupOld(Request $request) {
         // sync pending charges with app manager
         try {
             $this->syncAppManager();
@@ -238,18 +331,50 @@ class PlanController extends Controller
         $this->batchInsert('discounts_usage_log', $promotional_discounts_usage_log);
     }
 
-    public function filterData($data,$fields = [], $forgetAppId = true) {
-        $data = collect($data)->map(function ($value, $key) use ($fields, $forgetAppId){
-            if(!empty($fields)){
-                foreach($fields as $field){
-                    if(isset($value[$field])){
+//    public function filterData($data,$fields = [], $forgetAppId = true) {
+//        $data = collect($data)->map(function ($value, $key) use ($fields, $forgetAppId){
+//            if(!empty($fields)){
+//                foreach($fields as $field){
+//                    if(isset($value[$field])){
+//                        $value[$field] = \Carbon\Carbon::parse($value[$field])->format('Y-m-d H:i:s');
+//                    }
+//                }
+//            }
+//            return $forgetAppId ? collect($value)->forget('app_id')->toArray() : $value;
+//        })->toArray();
+//        return $data;
+//    }
+
+    public function filterData($data, $fields = []) {
+        $isSingleRow = false;
+        if (isset($data['id']) || (is_object($data) && isset($data->id))) {
+            $data = [$data];
+            $isSingleRow = true;
+        }
+
+        $processed = collect($data)->map(function ($value) use ($fields) {
+            $value = (array) $value;
+
+            // Format Dates
+            if (!empty($fields)) {
+                foreach ($fields as $field) {
+                    if (isset($value[$field]) && !empty($value[$field])) {
                         $value[$field] = \Carbon\Carbon::parse($value[$field])->format('Y-m-d H:i:s');
                     }
                 }
             }
-            return $forgetAppId ? collect($value)->forget('app_id')->toArray() : $value;
+
+            // Clean up and JSON encode
+            return collect($value)
+                ->forget(['app_id']) // We keep 'feature_plan' now!
+                ->map(function ($col) {
+                    // If the column is an array (like features or shopify_plans), JSON encode it
+                    return (is_array($col) || is_object($col)) ? json_encode($col) : $col;
+                })
+                ->toArray();
         })->toArray();
-        return $data;
+
+        return $isSingleRow ? $processed[0] : $processed;
     }
 
 
