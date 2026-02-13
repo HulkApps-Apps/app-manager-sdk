@@ -191,6 +191,9 @@ class PlanController extends Controller
         $this->initializeFailsafeDB();
 
         $commanFields = ['created_at', 'updated_at', 'deleted_at', 'valid_from', 'valid_to'];
+        if($syncType !== 'banners'){
+            $payload = $this->filterData($payload, $commanFields);
+        }
 
         switch ($syncType) {
             case 'plans':
@@ -198,71 +201,99 @@ class PlanController extends Controller
                     $payload['feature_plan'] = $payload['features'];
                     unset($payload['features']);
                 }
-                $cleanData = $this->filterData($payload, $commanFields);
-                DB::connection('app-manager-failsafe')->table('plans')->updateOrInsert(['id' => $cleanData['id']], $cleanData);
+                DB::connection('app-manager-failsafe')->table('plans')->updateOrInsert(['id' => $payload['id']], $payload);
                 break;
 
             case 'plan_delete':
                 DB::connection('app-manager-failsafe')->table('plans')->where('id', $payload['id'])->delete();
                 break;
 
-            case 'extend-trial':
-                $cleanData = $this->filterData($payload, $commanFields);
-                DB::connection('app-manager-failsafe')->table('trial_extension')->updateOrInsert(
-                    ['id' => $cleanData['id']],
-                    $cleanData
-                );
-                break;
-
-            case 'charges':
-                $cleanData = $this->filterData($payload, $commanFields);
-                DB::connection('app-manager-failsafe')->table('charges')->updateOrInsert(
-                    ['id' => $cleanData['id']],
-                    $cleanData
-                );
-                break;
-
-            case 'discounts':
-
-                $cleanData = $this->filterData($payload, $commanFields);
-                DB::connection('app-manager-failsafe')->table('discounts')->updateOrInsert(
-                    ['id' => $cleanData['id']],
-                    $cleanData
-                );
-                break;
-
             case 'plan_discount':
-                $cleanData = $this->filterData($payload, $commanFields);
                 DB::connection('app-manager-failsafe')->table('discount_plan')->updateOrInsert(
-                    ['id' => $cleanData['id']],
-                    $cleanData
+                    ['id' => $payload['id']],
+                    $payload
                 );
                 break;
 
             case 'plan_user':
-                $cleanData = $this->filterData($payload, $commanFields);
                 DB::connection('app-manager-failsafe')->table('plan_user')->updateOrInsert(
-                    ['id' => $cleanData['id']],
-                    $cleanData
+                    ['id' => $payload['id']],
+                    $payload
                 );
                 break;
 
             case 'plan_user_delete':
-                DB::connection('app-manager-failsafe')->table('plan_user')->where('id', $payload['id'])->delete();
+                DB::connection('app-manager-failsafe')->table('plan_user')->where('shop_domain', $payload['shop_domain'])->delete();
                 break;
 
-            case 'app_structures':
+            case 'extend-trial':
+                DB::connection('app-manager-failsafe')->table('trial_extension')->updateOrInsert(
+                    ['id' => $payload['id']],
+                    $payload
+                );
+                break;
+
+            case 'charges':
+                DB::connection('app-manager-failsafe')->table('charges')->updateOrInsert(
+                    ['id' => $payload['id']],
+                    $payload
+                );
+                break;
+
+            case 'charges_cancel':
+                DB::connection('app-manager-failsafe')
+                    ->table('charges')
+                    ->where('shop_domain', $payload['shop_domain'])
+                    ->update([
+                        'status' => 'cancelled',
+                        'cancelled_on' => $payload['cancelled_on'] ?? now()->toDateTimeString(),
+                        'updated_at' => now()->toDateTimeString()
+                    ]);
+                break;
+
+            case 'banners':
                 DB::connection('app-manager-failsafe')->table('marketing_banners')->updateOrInsert(
-                    ['id' => 1],
+                    ['id' => $payload['id']],
                     ['marketing_banners' => json_encode($payload)]
                 );
                 break;
 
+            case 'promotional_discounts':
+                $db = DB::connection('app-manager-failsafe');
+                $discountData = collect($payload)->forget([
+                    'shops_relation',
+                    'apps_relation',
+                    'plans_relation',
+                    'usage_relation'
+                ])->toArray();
+
+                $db->table('discounts')->updateOrInsert(['id' => $discountData['id']], $discountData);
+
+                if (isset($payload['shops_relation'])) {
+                    $db->table('discount_shops')->where('discount_id', $payload['id'])->delete();
+                    $db->table('discount_shops')->insert($payload['shops_relation'],);
+                }
+
+                if (isset($payload['plans_relation'])) {
+                    $db->table('discount_plans')->where('discount_id', $payload['id'])->delete();
+
+                    $filteredPlans = collect($payload['plans_relation'])->map(function ($item) {
+                        return collect($item)->forget('pivot')->toArray();
+                    })->toArray();
+
+                    $db->table('discount_plans')->insert($filteredPlans);
+                }
+
+                if (isset($payload['usage_relation'])) {
+                    $db->table('discounts_usage_log')->where('discount_id', $payload['id'])->delete();
+                    $db->table('discounts_usage_log')->insert($payload['usage_relation']);
+                }
+                break;
+
             default:
-                $cleanData = $this->filterData($payload);
                 DB::connection('app-manager-failsafe')->table($syncType)->updateOrInsert(
-                    ['id' => $cleanData['id']],
-                    $cleanData
+                    ['id' => $payload['id']],
+                    $payload
                 );
                 break;
         }
