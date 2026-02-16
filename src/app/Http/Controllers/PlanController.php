@@ -180,8 +180,7 @@ class PlanController extends Controller
         // sync pending charges with app manager
         try {
             $this->syncAppManager();
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             report($e);
         }
 
@@ -190,10 +189,7 @@ class PlanController extends Controller
 
         $this->initializeFailsafeDB();
 
-        $commanFields = ['created_at', 'updated_at', 'deleted_at', 'valid_from', 'valid_to'];
-        if($syncType !== 'banners'){
-            $payload = $this->filterData($payload, $commanFields);
-        }
+        $dateFields = ['created_at', 'updated_at', 'deleted_at', 'valid_from', 'valid_to', 'cancelled_on'];
 
         switch ($syncType) {
             case 'plans':
@@ -201,105 +197,92 @@ class PlanController extends Controller
                     $payload['feature_plan'] = $payload['features'];
                     unset($payload['features']);
                 }
-                DB::connection('app-manager-failsafe')->table('plans')->updateOrInsert(['id' => $payload['id']], $payload);
+                $filteredPlans = $this->filterData($payload, $dateFields);
+                DB::connection('app-manager-failsafe')->table('plans')->updateOrInsert(['id' => $filteredPlans['id']], $filteredPlans);
                 break;
 
-            case 'plan_delete':
+            case 'plan-delete':
                 DB::connection('app-manager-failsafe')->table('plans')->where('id', $payload['id'])->delete();
                 break;
 
-            case 'plan_discount':
-                DB::connection('app-manager-failsafe')->table('discount_plan')->updateOrInsert(
-                    ['id' => $payload['id']],
-                    $payload
-                );
-                break;
-
-            case 'plan_user':
-                DB::connection('app-manager-failsafe')->table('plan_user')->updateOrInsert(
-                    ['id' => $payload['id']],
-                    $payload
-                );
-                break;
-
-            case 'plan_user_delete':
+            case 'plan-user-delete':
                 DB::connection('app-manager-failsafe')->table('plan_user')->where('shop_domain', $payload['shop_domain'])->delete();
                 break;
 
-            case 'extend-trial':
-                DB::connection('app-manager-failsafe')->table('trial_extension')->updateOrInsert(
-                    ['id' => $payload['id']],
-                    $payload
-                );
-                break;
-
             case 'charges':
-                DB::connection('app-manager-failsafe')->table('charges')->updateOrInsert(
-                    ['id' => $payload['id']],
-                    $payload
-                );
+                $filteredCharges = $this->filterData($payload, $dateFields);
+                DB::connection('app-manager-failsafe')->table('charges')->updateOrInsert(['id' => $filteredCharges['id']], $filteredCharges);
                 break;
 
-            case 'charges_cancel':
+            case 'charges-cancel':
                 DB::connection('app-manager-failsafe')
                     ->table('charges')
                     ->where('shop_domain', $payload['shop_domain'])
                     ->update([
                         'status' => 'cancelled',
-                        'cancelled_on' => $payload['cancelled_on'] ?? now()->toDateTimeString(),
-                        'updated_at' => now()->toDateTimeString()
+                        'cancelled_on' => $this->formatDate($payload['cancelled_on'] ?? now()->toDateTimeString()),
+                        'updated_at' => $this->formatDate(now())
                     ]);
                 break;
 
             case 'banners':
                 DB::connection('app-manager-failsafe')->table('marketing_banners')->updateOrInsert(
                     ['id' => $payload['id']],
-                    ['marketing_banners' => json_encode($payload)]
+                    ['marketing_banners' => is_string($payload) ? $payload : json_encode($payload)]
                 );
                 break;
 
-            case 'promotional_discounts':
-                $db = DB::connection('app-manager-failsafe');
-                $discountData = collect($payload)->forget([
-                    'shops_relation',
-                    'apps_relation',
-                    'plans_relation',
-                    'usage_relation'
-                ])->toArray();
+            case 'promotional-discounts':
+                $filteredDiscount = $this->filterData($payload, $dateFields, ['pivot']);
 
-                $db->table('discounts')->updateOrInsert(['id' => $discountData['id']], $discountData);
+                $mainData = collect($filteredDiscount)->forget(['shops_relation', 'apps_relation', 'plans_relation', 'usage_relation'])->toArray();
 
-                if (isset($payload['shops_relation'])) {
-                    $db->table('discount_shops')->where('discount_id', $payload['id'])->delete();
-                    $db->table('discount_shops')->insert($payload['shops_relation'],);
+                DB::connection('app-manager-failsafe')->table('discounts')->updateOrInsert(['id' => $mainData['id']], $mainData);
+
+                $relations = [
+                    'shops_relation' => 'discount_shops',
+                    'plans_relation' => 'discount_plans',
+                    'usage_relation' => 'discounts_usage_log'
+                ];
+
+                foreach ($relations as $key => $tableName) {
+                    if (isset($payload[$key])) {
+                        DB::connection('app-manager-failsafe')->table($tableName)->where('discount_id', $payload['id'])->delete();
+                        $filteredRows = $this->filterData($payload[$key], $dateFields, ['pivot']);
+                        DB::connection('app-manager-failsafe')->table($tableName)->insert($filteredRows);
+                    }
                 }
+                break;
 
-                if (isset($payload['plans_relation'])) {
-                    $db->table('discount_plans')->where('discount_id', $payload['id'])->delete();
-
-                    $filteredPlans = collect($payload['plans_relation'])->map(function ($item) {
-                        return collect($item)->forget('pivot')->toArray();
-                    })->toArray();
-
-                    $db->table('discount_plans')->insert($filteredPlans);
-                }
-
-                if (isset($payload['usage_relation'])) {
-                    $db->table('discounts_usage_log')->where('discount_id', $payload['id'])->delete();
-                    $db->table('discounts_usage_log')->insert($payload['usage_relation']);
-                }
+            case 'promotional-discounts-delete':
+                DB::connection('app-manager-failsafe')
+                    ->table('discounts')
+                    ->where('id', $payload['id'])
+                    ->update([
+                        'deleted_at' => isset($payload['deleted_at']) ? $this->formatDate($payload['deleted_at']) : now()->toDateTimeString(),
+                        'updated_at' => now()->toDateTimeString()
+                    ]);
                 break;
 
             default:
-                DB::connection('app-manager-failsafe')->table($syncType)->updateOrInsert(
-                    ['id' => $payload['id']],
-                    $payload
-                );
+                $tableMap = [
+                    'plan-discount' => 'discount_plan',
+                    'plan-user'     => 'plan_user',
+                    'extend-trial'  => 'trial_extension',
+                ];
+
+                if (array_key_exists($syncType, $tableMap)) {
+                    $tableName = $tableMap[$syncType];
+                    $filteredData = $this->filterData($payload, $dateFields);
+                    DB::connection('app-manager-failsafe')->table($tableName)->updateOrInsert(['id' => $filteredData['id']], $filteredData);
+                } else {
+                    \Log::error("Failsafe: Unhandled sync type: {$syncType}");
+                }
                 break;
         }
     }
 
-    public function failSafeBackupOld(Request $request) {
+    public function fullFailSafeBackup(Request $request) {
         // sync pending charges with app manager
         try {
             $this->syncAppManager();
@@ -309,7 +292,7 @@ class PlanController extends Controller
         }
 
         // initialize and reset failsafe database
-        $this->initializeFailsafeDB();
+        $this->initializeFailsafeDbFullWipe();
 
         $data = $request->all();
         $commanFields= [
@@ -320,7 +303,7 @@ class PlanController extends Controller
         ];
         DB::connection('app-manager-failsafe')->table('marketing_banners')->insert($marketingBanners);
 
-        $plans = $this->filterData($data['plans'], ['created_at', 'updated_at','deleted_at']);
+        $plans = $this->filterDataForFullFailsafeBackup($data['plans'], ['created_at', 'updated_at','deleted_at']);
         foreach ($plans as $index => $plan) {
             $plans[$index] = $this->serializeData($plan);
             $plans[$index]['feature_plan'] = $plans[$index]['features'];
@@ -329,23 +312,23 @@ class PlanController extends Controller
         //DB::connection('app-manager-failsafe')->table('plans')->insert($plans);
         $this->batchInsert('plans', $plans);
 
-        $charges = $this->filterData($data['charges'],$commanFields);
+        $charges = $this->filterDataForFullFailsafeBackup($data['charges'],$commanFields);
         //DB::connection('app-manager-failsafe')->table('charges')->insert($charges);
         $this->batchInsert('charges', $charges);
 
-        $discount_plans = $this->filterData($data['discount_plans'],$commanFields);
+        $discount_plans = $this->filterDataForFullFailsafeBackup($data['discount_plans'],$commanFields);
         //DB::connection('app-manager-failsafe')->table('discount_plan')->insert($discount_plans);
         $this->batchInsert('discount_plan', $discount_plans);
 
-        $extend_trials = $this->filterData($data['extend_trials'],$commanFields);
+        $extend_trials = $this->filterDataForFullFailsafeBackup($data['extend_trials'],$commanFields);
         //DB::connection('app-manager-failsafe')->table('trial_extension')->insert($extend_trials);
         $this->batchInsert('trial_extension', $extend_trials);
 
-        $plan_users = $this->filterData($data['plan_users'],$commanFields);
+        $plan_users = $this->filterDataForFullFailsafeBackup($data['plan_users'],$commanFields);
         //DB::connection('app-manager-failsafe')->table('plan_user')->insert($plan_users);
         $this->batchInsert('plan_user', $plan_users);
 
-        $promotional_discounts = $this->filterData($data['promotional_discounts'],['valid_from','valid_to','created_at', 'updated_at','deleted_at'],false);
+        $promotional_discounts = $this->filterDataForFullFailsafeBackup($data['promotional_discounts'],['valid_from','valid_to','created_at', 'updated_at','deleted_at'],false);
         //DB::connection('app-manager-failsafe')->table('discounts')->insert($promotional_discounts);
         $this->batchInsert('discounts', $promotional_discounts);
 
@@ -357,57 +340,70 @@ class PlanController extends Controller
         //DB::connection('app-manager-failsafe')->table('discount_plans')->insert($promotional_discounts_plans);
         $this->batchInsert('discount_plans', $promotional_discounts_plans);
 
-        $promotional_discounts_usage_log = $this->filterData($data['promotional_discounts_usage_log'],$commanFields,false);
+        $promotional_discounts_usage_log = $this->filterDataForFullFailsafeBackup($data['promotional_discounts_usage_log'],$commanFields,false);
         //DB::connection('app-manager-failsafe')->table('discounts_usage_log')->insert($promotional_discounts_usage_log);
         $this->batchInsert('discounts_usage_log', $promotional_discounts_usage_log);
     }
 
-//    public function filterData($data,$fields = [], $forgetAppId = true) {
-//        $data = collect($data)->map(function ($value, $key) use ($fields, $forgetAppId){
-//            if(!empty($fields)){
-//                foreach($fields as $field){
-//                    if(isset($value[$field])){
-//                        $value[$field] = \Carbon\Carbon::parse($value[$field])->format('Y-m-d H:i:s');
-//                    }
-//                }
-//            }
-//            return $forgetAppId ? collect($value)->forget('app_id')->toArray() : $value;
-//        })->toArray();
-//        return $data;
-//    }
+    public function filterData($data, $dateFields = [], $excludeKeys = ['app_id', 'pivot'])
+    {
+        $rows = $this->standardizeDataFormat($data);
 
-    public function filterData($data, $fields = []) {
-        $isSingleRow = false;
+        $processed = array_map(function ($row) use ($dateFields, $excludeKeys) {
+            return $this->serializeRowForFailsafe((array) $row, $dateFields, $excludeKeys);
+        }, $rows);
+
+        return (isset($data['id']) || is_object($data)) ? $processed[0] : $processed;
+    }
+
+    private function serializeRowForFailsafe(array $row, array $dateFields, array $excludeKeys)
+    {
+        return collect($row)
+            ->forget($excludeKeys)
+            ->map(function ($value, $key) use ($dateFields) {
+                if (in_array($key, $dateFields) && !empty($value)) {
+                    return $this->formatDate($value);
+                }
+
+                if (is_array($value) || is_object($value)) {
+                    return json_encode($value);
+                }
+
+                return $value;
+            })
+            ->toArray();
+    }
+
+    private function standardizeDataFormat($data)
+    {
         if (isset($data['id']) || (is_object($data) && isset($data->id))) {
-            $data = [$data];
-            $isSingleRow = true;
+            return [$data];
         }
+        return $data;
+    }
 
-        $processed = collect($data)->map(function ($value) use ($fields) {
-            $value = (array) $value;
+    private function formatDate($value)
+    {
+        try {
+            return \Carbon\Carbon::parse($value)->format('Y-m-d H:i:s');
+        } catch (\Exception $e) {
+            return $value;
+        }
+    }
 
-            // Format Dates
-            if (!empty($fields)) {
-                foreach ($fields as $field) {
-                    if (isset($value[$field]) && !empty($value[$field])) {
+    public function filterDataForFullFailsafeBackup($data,$fields = [], $forgetAppId = true) {
+        $data = collect($data)->map(function ($value, $key) use ($fields, $forgetAppId){
+            if(!empty($fields)){
+                foreach($fields as $field){
+                    if(isset($value[$field])){
                         $value[$field] = \Carbon\Carbon::parse($value[$field])->format('Y-m-d H:i:s');
                     }
                 }
             }
-
-            // Clean up and JSON encode
-            return collect($value)
-                ->forget(['app_id']) // We keep 'feature_plan' now!
-                ->map(function ($col) {
-                    // If the column is an array (like features or shopify_plans), JSON encode it
-                    return (is_array($col) || is_object($col)) ? json_encode($col) : $col;
-                })
-                ->toArray();
+            return $forgetAppId ? collect($value)->forget('app_id')->toArray() : $value;
         })->toArray();
-
-        return $isSingleRow ? $processed[0] : $processed;
+        return $data;
     }
-
 
     public function batchInsert($table, $data, $batchSize = 50) {
         if(empty($data)){

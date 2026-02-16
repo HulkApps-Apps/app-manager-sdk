@@ -14,6 +14,7 @@ Route::prefix('api/app-manager')->as('app-manager.')->group(function () {
     Route::post('active-without-plan', PlanController::class.'@activeWithoutPlan');
     Route::post('burst-cache', PlanController::class.'@burstCache');
     Route::post('fail-safe-backup', PlanController::class.'@failSafeBackup');
+    Route::post('fail-safe-backup-full', PlanController::class.'@fullFailSafeBackup');
 
     Route::get('plan/process/callback', ChargeController::class.'@callback')->name('plan.callback');
     Route::get('plan/process/{plan_id}', ChargeController::class.'@process');

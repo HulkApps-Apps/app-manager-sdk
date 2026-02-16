@@ -128,6 +128,7 @@ trait FailsafeHelper {
 
         $discountData = DB::connection('app-manager-failsafe')->table('discounts')
             ->where('enabled', true)
+            ->whereNull('deleted_at')
             ->where('valid_from', '<=', $now)
             ->where(function ($query) use ($now) {
                 $query->whereNull('valid_to')
@@ -311,7 +312,7 @@ trait FailsafeHelper {
             $status = false;
         }
         if(!$status){
-            $this->initializeFailsafeDB();
+            $this->initializeFailsafeDBFullWipe();
             $status = true;
         }
 
@@ -358,13 +359,13 @@ trait FailsafeHelper {
         }
     }
 
-//    public function initializeFailsafeDB() {
-//        $db = DB::connection('app-manager-failsafe');
-//        $database = $db->getConfig('database');
-//        if(!empty($database)){
-//            Artisan::call('migrate:fresh', ['--force' => true,'--database' => 'app-manager-failsafe', '--path' => "/vendor/hulkapps/appmanager/migrations"]);
-//        }
-//    }
+    public function initializeFailsafeDBFullWipe() {
+        $db = DB::connection('app-manager-failsafe');
+        $database = $db->getConfig('database');
+        if(!empty($database)){
+            Artisan::call('migrate:fresh', ['--force' => true,'--database' => 'app-manager-failsafe', '--path' => "/vendor/hulkapps/appmanager/migrations"]);
+        }
+    }
 
     public function initializeFailsafeDB() {
         $db = DB::connection('app-manager-failsafe');
