@@ -177,6 +177,17 @@ class PlanController extends Controller
 
     public function failSafeBackup(Request $request)
     {
+        $backupType = $request->input('backup_type', 'full');
+
+        if ($backupType === 'incremental') {
+             $this->failSafeIncrementalBackup($request);
+        }
+
+       $this->rebuildFailsafe($request);
+    }
+
+    public function failSafeIncrementalBackup(Request $request)
+    {
         // sync pending charges with app manager
         try {
             $this->syncAppManager();
@@ -282,7 +293,7 @@ class PlanController extends Controller
         }
     }
 
-    public function fullFailSafeBackup(Request $request) {
+    public function rebuildFailsafe(Request $request) {
         // sync pending charges with app manager
         try {
             $this->syncAppManager();
