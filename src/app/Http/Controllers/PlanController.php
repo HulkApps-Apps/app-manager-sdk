@@ -181,9 +181,10 @@ class PlanController extends Controller
 
         if ($backupType === 'incremental') {
              $this->failSafeIncrementalBackup($request);
+        }else{
+            $this->rebuildFailsafe($request);
         }
 
-       $this->rebuildFailsafe($request);
     }
 
     public function failSafeIncrementalBackup(Request $request)
