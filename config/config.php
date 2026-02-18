@@ -80,6 +80,7 @@ return [
         'created_at' => env('CREATED_AT', 'created_at'), // 2022-04-15 10:43:05
         'trial_activated_at' => env('TRIAL_ACTIVATED_AT', 'trial_activated_at'), // 2022-04-15 10:43:05
         'grandfathered' => env('GRAND_FATHERED', 'grandfathered'), // true
+        'partner_development' => env('PARTNER_DEVELOPMENT', 'partner_development'), // true
     ],
 
     /*
@@ -131,5 +132,17 @@ return [
     */
 
     'cache_driver' => env('CACHE_DRIVER', 'redis'),
+
+    /*
+    |-------------------------------------------
+    | Most Popular plan IDs
+    |-------------------------------------------
+    |
+    | Array of plan IDs (integers) to mark as most popular plans.
+    | Must be an array of integers (e.g. [100,102]). Do not use a comma-separated string.
+    |
+    |-------------------------------------------
+    */
+    'most_popular_plan_ids' => [],
 
 ];

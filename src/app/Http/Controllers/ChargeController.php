@@ -23,6 +23,7 @@ class ChargeController extends Controller
         $storePlanField = config('app-manager.field_names.plan_id', 'plan_id');
         $storeTrialActivatedAtField = config('app-manager.field_names.trial_activated_at', 'trial_activated_at');
         $storeShopifyPlanField = config('app-manager.field_names.shopify_plan', 'shopify_plan');
+        $storePartnerDevelopmentField = config('app-manager.field_names.partner_development', 'partner_development');
 
         $shop = DB::table($tableName)->where($storeNameField, $request->shop)->first();
 
@@ -115,6 +116,11 @@ class ChargeController extends Controller
 
             if (!empty($plan['affiliate'])) {
                 $test = in_array($shopifyPlan, array_column($plan['affiliate'], 'value')) ? true : null;
+
+                $isPartnerDevelopment = (bool) ($shop->$storePartnerDevelopmentField ?? false);
+                if ($isPartnerDevelopment) {
+                    $test = true;
+                }
             }
 
             $promotionalDiscount=[];
