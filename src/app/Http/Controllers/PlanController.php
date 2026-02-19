@@ -238,10 +238,16 @@ class PlanController extends Controller
                 break;
 
             case 'banners':
-                DB::connection('app-manager-failsafe')->table('marketing_banners')->updateOrInsert(
-                    ['id' => $payload['id']],
-                    ['marketing_banners' => is_string($payload) ? $payload : json_encode($payload)]
-                );
+                DB::connection('app-manager-failsafe')
+                    ->table('marketing_banners')
+                    ->updateOrInsert(
+                        ['id' => 1],
+                        [
+                            'marketing_banners' => is_string($payload) ? $payload : json_encode($payload),
+                            'updated_at' => now(),
+                            'created_at' => DB::raw('IFNULL(created_at, NOW())')
+                        ]
+                    );
                 break;
 
             case 'promotional-discounts':
