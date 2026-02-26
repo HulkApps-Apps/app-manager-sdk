@@ -282,6 +282,12 @@ class PlanController extends Controller
                     ]);
                 break;
 
+            case 'promotional-discounts-app-removed':
+                DB::connection('app-manager-failsafe')->table('discounts')->where('id', $payload['id'])->delete();
+                DB::connection('app-manager-failsafe')->table('discount_shops')->where('discount_id', $payload['id'])->delete();
+                DB::connection('app-manager-failsafe')->table('discounts_usage_log')->where('discount_id', $payload['id'])->delete();
+                break;
+
             default:
                 $tableMap = [
                     'plan-discount' => 'discount_plan',
