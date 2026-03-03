@@ -143,12 +143,12 @@ Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
 
 ### Security
 
-If you discover any security related issues, please email divyank@hulkapps.com instead of using the issue tracker.
+If you discover any security related issues, please email shailesh@shopcircle.co instead of using the issue tracker.
 
 ## Credits
 
--   [Chirag](https://github.com/chirag-hulkapps)
--   [HulkApps](https://github.com/dv-hulkapps)
+-   [Shailesh Desai](https://github.com/shailesh-hulkapps)
+-   [Lamija Dzambo Bajric](https://github.com/lamijadzambo)
 -   [All Contributors](../../contributors)
 
 ## License
