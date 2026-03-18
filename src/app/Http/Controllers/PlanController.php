@@ -120,8 +120,15 @@ class PlanController extends Controller
         $plans = $data['plans'] ?? null;
         $shopify_plans = $data['shopify_plans'] ?? null;
         $itemsPerPage = $data['itemsPerPage'] ?? 25;
+        unset($shopify_fields['shopify_token']);
+        $selectedFields = array_values($shopify_fields);
+        if (empty($selectedFields)) {
+            $selectedFields = ['name', 'plan_id', 'created_at', 'shopify_plan', 'trial_activated_at'];
+        }
 
-        $users = DB::table($tableName)->when($search, function ($q) use ($shopify_fields, $search) {
+        $users = DB::table($tableName)
+            ->select($selectedFields)
+            ->when($search, function ($q) use ($shopify_fields, $search) {
             return $q->where(($shopify_fields['name'] ?? 'name'), 'like', '%'.$search.'%')
                 ->orWhere(($shopify_fields['shopify_email'] ?? 'shopify_email'), 'like', '%'.$search.'%');
         })->when($plans, function ($q) use ($shopify_fields, $plans) {
@@ -132,7 +139,7 @@ class PlanController extends Controller
 
         $users->getCollection()->transform(function ($user) use ($shopify_fields) {
             foreach ($shopify_fields as $key => $shopify_field) {
-                if ($key !== $shopify_field) {
+                if ($key !== $shopify_field && isset($user->{$shopify_field})) {
                     $user->{$key} = $user->{$shopify_field};
                 }
             }
