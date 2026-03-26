@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use function HulkApps\AppManager\app\appManagerCacheData;
 use function HulkApps\AppManager\app\deleteAppManagerCache;
 use function HulkApps\AppManager\app\isValidUser;
+use Composer\InstalledVersions;
 
 class PlanController extends Controller
 {
@@ -449,6 +450,58 @@ class PlanController extends Controller
         } finally {
             DB::disconnect('app-manager-failsafe');
         }
+    }
+
+    public function getSdkVersions(Request $request)
+    {
+        try {
+            $frontendVersion = $this->getFrontendSdkVersion($request->get('frontend_sdk'));
+        } catch (\Throwable $e) {
+            report($e);
+            $frontendVersion = null;
+        }
+
+        return response()->json([
+            'backend_sdk_version' => $this->getBackendSdkVersion($request->get('backend_sdk_php')),
+            'frontend_sdk_version' => $frontendVersion,
+        ]);
+    }
+
+    private function getBackendSdkVersion($package)
+    {
+        if (!class_exists(\Composer\InstalledVersions::class)) {
+            return null;
+        }
+
+        if (!\Composer\InstalledVersions::isInstalled($package)) {
+            return null;
+        }
+
+        return \Composer\InstalledVersions::getPrettyVersion($package);
+    }
+
+
+    private function getFrontendSdkVersion($package)
+    {
+        $path = base_path('package-lock.json');
+        if (!is_readable($path)) {
+            return null;
+        }
+
+        $lock = json_decode((string) file_get_contents($path), true);
+        if (!is_array($lock)) {
+            return null;
+        }
+
+        // npm 7+ (lockfileVersion 2+)
+        if (!empty($lock['packages']) && is_array($lock['packages'])) {
+            $key = 'node_modules/'.$package;
+
+            return $lock['packages'][$key]['version'] ?? null;
+        }
+
+        // lockfileVersion 1 — top-level "dependencies"
+        return $lock['dependencies'][$package]['version'] ?? null;
     }
 
 }
