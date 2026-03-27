@@ -462,7 +462,7 @@ class PlanController extends Controller
         }
 
         return response()->json([
-            'backend_sdk_version' => $this->getBackendSdkVersion($request->get('backend_sdk_php')),
+            'backend_sdk_version' => $this->getBackendSdkVersion($request->get('backend_sdk')),
             'frontend_sdk_version' => $frontendVersion,
         ]);
     }
