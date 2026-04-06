@@ -42,7 +42,7 @@ class PlanController extends Controller
         $cacheKey = $request->has('shop_domain') ? 'app-manager.plans-'.$request->get('shop_domain') : 'app-manager.all-plans';
 
         $response = appManagerCacheData($cacheKey, function () use ($request, $shopTableName, $storeFieldName, $planFieldName, $shopifyPlanFieldName, $cacheKey, $mostPopularPlanIds) {
-            $shopify_plan = $plan = $globalPlan = $plans = $trialActivatedAt = null;
+            $shopify_plan = $plan = $plans = $trialActivatedAt = null;
             $choose_later = false;
 
             if ($request->has('shop_domain')) {
@@ -54,8 +54,6 @@ class PlanController extends Controller
                 $plan = collect($plans)->where('id', $activePlanId)->first();
                 $trialActivatedAt = collect($userData)->pluck(config('app-manager.field_names.trial_activated_at', 'trial_activated_at'))->first() ?? null;
                 $activeCharge = \AppManager::getCharge($shopDomain);
-                if(empty($plan) && !empty($activeCharge['bundle_charge']))
-                    $plan = \AppManager::getBundlePlan($activePlanId);
                 if (empty($activeCharge['cancelled_charge']) && empty($activeCharge['active_charge']) && !$trialActivatedAt && !$plan) {
                     $choose_later = true;
                 }
@@ -86,25 +84,16 @@ class PlanController extends Controller
                 }
             }
 
-            if(!empty($plan) && isset($plan['is_global']) && $plan['is_global']){
-                $bundlePlan = $plan;
-            }else
-                $bundlePlan = \AppManager::getBundlePlan();
-
-            $appBundleData = \AppManager::getAppBundleData();
 
             return [
                 'plans' => $plans,
                 'promotional_discount' => $promotionalDiscount,
                 'shopify_plan' => $shopify_plan,
                 'plan' => $plan,
-                'bundle_plan' => $bundlePlan,
-                'bundle_details' => $appBundleData,
                 'default_plan_id' => $defaultPlanId,
                 'most_popular_plan_ids' => $mostPopularPlanIds,
                 'choose_later' => $choose_later,
                 'has_active_charge' => (isset($activeCharge['active_charge']) && !empty($activeCharge['active_charge'])) || !$trialActivatedAt,
-                'global_plan_charge' => !empty($plan) && isset($plan['is_global']) && $plan['is_global'] && (isset($activeCharge['active_charge']) && !empty($activeCharge['active_charge']) && !empty($activeCharge['bundle_charge'])),
             ];
         });
 
