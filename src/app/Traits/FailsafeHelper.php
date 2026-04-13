@@ -14,7 +14,7 @@ trait FailsafeHelper {
         return head($marketingBannersData)->marketing_banners ?? null;
     }
 
-    public function preparePlans($shop_domain, $active_plan_id = null) {
+    public function preparePlans($shop_domain, $active_plan_id = null, $shopify_plan = null) {
 
         $activeChargePrice = $activePlanId = null;
         $plansData = DB::connection('app-manager-failsafe')->table('plans')->get();
@@ -94,6 +94,9 @@ trait FailsafeHelper {
                 $plans[$key]['cycle_count'] = $customDiscounts[$index]['cycle_count'];
             }
         }
+
+        $plans = $this->filterPlansByShopifyPlan($plans, $shopify_plan, $customPlanIds);
+
         return $plans;
     }
 
@@ -424,5 +427,39 @@ trait FailsafeHelper {
         }
 
         return ['has_plan' => false];
+    }
+
+    private function filterPlansByShopifyPlan(array $plans, $shopify_plan, array $customPlanIds): array
+    {
+        if (!$shopify_plan) {
+            return $plans;
+        }
+
+        $filterTierList = DB::connection('app-manager-failsafe')
+            ->table('app_filters')
+            ->pluck('shopify_plans')
+            ->flatMap(fn ($json) => json_decode($json, true) ?? [])
+            ->all();
+
+        if (empty($filterTierList)) {
+            return $plans;
+        }
+
+        $merchantInFilter = in_array(trim($shopify_plan), $filterTierList, true);
+        $customPlanIds = array_filter($customPlanIds, fn ($id) => $id !== null);
+
+        return array_values(array_filter($plans, function ($plan) use ($customPlanIds, $merchantInFilter, $filterTierList) {
+            if (in_array($plan['id'], $customPlanIds, true)) {
+                return true;
+            }
+            if (!empty($plan['public']) && (float)($plan['price'] ?? -1) == 0) {
+                return true;
+            }
+
+            $shopifyPlans = $plan['shopify_plans'] ?? [];
+            $planInTiers = !empty($shopifyPlans) && count(array_intersect($filterTierList, $shopifyPlans)) > 0;
+
+            return $merchantInFilter ? $planInTiers : !$planInTiers;
+        }));
     }
 }
