@@ -42,11 +42,11 @@ class AppManager
                 $payload['shopify_plan'] = $shopify_plan;
             }
             $data = $this->client->get('plans', $payload);
-            return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->preparePlans($shop_domain, $active_plan_id);
+            return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->preparePlans($shop_domain, $active_plan_id, $shopify_plan);
         }
         catch (\Exception $e) {
             report($e);
-            return $this->preparePlans($shop_domain);
+            return $this->preparePlans($shop_domain, $active_plan_id, $shopify_plan);
         }
     }
 

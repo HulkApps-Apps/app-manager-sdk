@@ -295,6 +295,14 @@ class PlanController extends Controller
                 DB::connection('app-manager-failsafe')->table('discounts_usage_log')->where('discount_id', $payload['id'])->delete();
                 break;
 
+            case 'app-filters':
+                DB::connection('app-manager-failsafe')->table('app_filters')->truncate();
+                $filteredFilters = $this->filterData($payload, $dateFields);
+                foreach ($filteredFilters as $filter) {
+                    DB::connection('app-manager-failsafe')->table('app_filters')->insert($filter);
+                }
+                break;
+
             default:
                 $tableMap = [
                     'plan-discount' => 'discount_plan',
@@ -374,6 +382,15 @@ class PlanController extends Controller
         $promotional_discounts_usage_log = $this->filterDataForFullFailsafeBackup($data['promotional_discounts_usage_log'],$commanFields,false);
         //DB::connection('app-manager-failsafe')->table('discounts_usage_log')->insert($promotional_discounts_usage_log);
         $this->batchInsert('discounts_usage_log', $promotional_discounts_usage_log);
+
+        $appFilters = $this->filterDataForFullFailsafeBackup($data['app_filters'], $commanFields);
+        foreach ($appFilters as &$filter) {
+            if (isset($filter['shopify_plans']) && is_array($filter['shopify_plans'])) {
+                $filter['shopify_plans'] = json_encode($filter['shopify_plans']);
+            }
+        }
+        $this->batchInsert('app_filters', $appFilters);
+
     }
 
     public function filterData($data, $dateFields = [], $excludeKeys = ['app_id', 'pivot'])

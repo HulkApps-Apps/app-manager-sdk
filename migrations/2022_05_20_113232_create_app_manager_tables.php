@@ -139,6 +139,12 @@ class CreateAppManagerTables extends Migration
             $table->unsignedBigInteger('discount_id')->index();
             $table->bigInteger('plan_id')->index();
         });
+
+        Schema::create('app_filters', function (Blueprint $table) {
+            $table->id();
+            $table->json('shopify_plans');
+            $table->timestamps();
+        });
     }
 
 	/**
@@ -158,5 +164,6 @@ class CreateAppManagerTables extends Migration
 		Schema::dropIfExists('discount_shops');
 		Schema::dropIfExists('discounts_usage_log');
 		Schema::dropIfExists('discount_plans');
+		Schema::dropIfExists('app_filters');
 	}
 }
