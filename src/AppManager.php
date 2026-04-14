@@ -268,4 +268,19 @@ class AppManager
         }
     }
 
+    public function storeSdkVersions($shop_domain, $backend_sdk_version, $frontend_sdk_version) {
+        try {
+            $data = $this->client->post('store-sdk-versions', [
+                'shop_domain' => $shop_domain,
+                'backend_sdk_version' => $backend_sdk_version,
+                'frontend_sdk_version' => $frontend_sdk_version
+            ]);
+            return response()->json(['success' => true], 200);
+        }
+        catch (\Exception $e) {
+            report($e);
+            return response(['error' => $e->getMessage()])->setStatusCode($e->getCode() ?: 500);
+        }
+    }
+
 }
