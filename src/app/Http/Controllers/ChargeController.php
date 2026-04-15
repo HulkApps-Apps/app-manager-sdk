@@ -180,6 +180,15 @@ class ChargeController extends Controller
 
 
             $returnUrlRoute = route('app-manager.plan.callback');
+
+            $callbackRouteField = config('app-manager.callback_route');
+            if (!empty($callbackRouteField)) {
+                $customCallbackRoute = $shop->$callbackRouteField ?? null;
+                if (!empty($customCallbackRoute)) {
+                    $returnUrlRoute = $customCallbackRoute;
+                }
+            }
+
             if (strpos($returnUrlRoute, '?') !== false)
                 $returnToUrl = $returnUrlRoute . "&" . http_build_query($requestData, '', '&', PHP_QUERY_RFC3986);
             else
