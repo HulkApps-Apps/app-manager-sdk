@@ -123,6 +123,18 @@ return [
 
     /*
     |-------------------------------------------
+    | Callback URL route
+    |-------------------------------------------
+    |
+    | The custom route used for handling callback responses (Example - https://yourapp.com/api/app-manager/plan/process/callback)
+    |
+    |-------------------------------------------
+    */
+
+    'callback_route' => env('CALLBACK_ROUTE', null),
+
+    /*
+    |-------------------------------------------
     | Cache driver
     |-------------------------------------------
     |
