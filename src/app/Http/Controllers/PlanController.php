@@ -35,8 +35,10 @@ class PlanController extends Controller
             $mostPopularPlanIds = array_values(array_unique($mostPopularPlanIds));
         }
 
-        $backendSdkVersion = $this->getBackendSdkVersion('hulkapps/appmanager');
-        $frontendSdkVersion = $request->get('frontend_sdk_version') ?? null;
+        $sdkVersions = [
+            'backend' => $this->getBackendSdkVersion('hulkapps/appmanager'),
+            'frontend' => $request->get('frontend_sdk_version') ?? null,
+        ];
 
         $shopTableName = config('app-manager.shop_table_name', 'users');
         $storeFieldName = config('app-manager.field_names.name', 'name');
@@ -44,7 +46,7 @@ class PlanController extends Controller
         $shopifyPlanFieldName = config('app-manager.field_names.shopify_plan', 'shopify_plan');
         $cacheKey = $request->has('shop_domain') ? 'app-manager.plans-'.$request->get('shop_domain') : 'app-manager.all-plans';
 
-        $response = appManagerCacheData($cacheKey, function () use ($request, $shopTableName, $storeFieldName, $planFieldName, $shopifyPlanFieldName, $cacheKey, $mostPopularPlanIds, $backendSdkVersion, $frontendSdkVersion) {
+        $response = appManagerCacheData($cacheKey, function () use ($request, $shopTableName, $storeFieldName, $planFieldName, $shopifyPlanFieldName, $cacheKey, $mostPopularPlanIds, $sdkVersions) {
             $shopify_plan = $plan = $globalPlan = $plans = $trialActivatedAt = null;
             $choose_later = false;
 
@@ -53,8 +55,7 @@ class PlanController extends Controller
                 $userData = DB::table($shopTableName)->where($storeFieldName, $shopDomain)->get();
                 $shopify_plan = collect($userData)->pluck($shopifyPlanFieldName)->first();
                 $activePlanId = collect($userData)->pluck($planFieldName)->first() ?? null;
-                $plans = \AppManager::getPlans($shopDomain, $activePlanId, $shopify_plan);
-                $res = \AppManager::storeSdkVersions($shopDomain, $backendSdkVersion, $frontendSdkVersion);
+                $plans = \AppManager::getPlans($shopDomain, $activePlanId, $shopify_plan, $sdkVersions);
                 $plan = collect($plans)->where('id', $activePlanId)->first();
                 $trialActivatedAt = collect($userData)->pluck(config('app-manager.field_names.trial_activated_at', 'trial_activated_at'))->first() ?? null;
                 $activeCharge = \AppManager::getCharge($shopDomain);
