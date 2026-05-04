@@ -31,7 +31,7 @@ class AppManager
         }
     }
 
-    public function getPlans($shop_domain, $active_plan_id = null, $shopify_plan = null) {
+    public function getPlans($shop_domain, $active_plan_id = null, $shopify_plan = null, $sdk_versions = []) {
 
         try {
             $payload = ['shop_domain' => $shop_domain];
@@ -40,6 +40,9 @@ class AppManager
             }
             if ($shopify_plan) {
                 $payload['shopify_plan'] = $shopify_plan;
+            }
+            if (!empty($sdk_versions)) {
+                $payload['sdk_versions'] = $sdk_versions;
             }
             $data = $this->client->get('plans', $payload);
             return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->preparePlans($shop_domain, $active_plan_id, $shopify_plan);
