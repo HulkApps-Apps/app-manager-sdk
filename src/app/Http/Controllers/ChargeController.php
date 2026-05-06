@@ -97,10 +97,12 @@ class ChargeController extends Controller
                 if($remaining !== null){
                     if($shop->$storePlanField != null){
                         $currentPlan = \AppManager::getPlan($shop->$storePlanField);
-                        $usedDays = $currentPlan['trial_days'] - $remaining;
-                        if($usedDays > 0){
-                            $days = $trialDays - $usedDays;
-                            $trialDays = $days > 0?$days:0;
+                        if (!empty($currentPlan) && !empty($currentPlan['trial_days'])) {
+                            $usedDays = $currentPlan['trial_days'] - $remaining;
+                            if ($usedDays > 0) {
+                                $days = $trialDays - $usedDays;
+                                $trialDays = $days > 0 ? $days : 0;
+                            }
                         }
                     }else{
                         $trialDays = $remaining;

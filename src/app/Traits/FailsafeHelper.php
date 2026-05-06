@@ -72,12 +72,10 @@ trait FailsafeHelper {
 
         $planIds = collect($plans)->pluck('id')->toArray();
         $highlightsByPlans = !empty($planIds)
-            ? DB::connection('app-manager-failsafe')->table('plan_highlights')
-                ->whereIn('plan_id', $planIds)
-                ->orderBy('sort_order')
-                ->get()
-                ->groupBy('plan_id')
-                ->toArray()
+            ? collect($plans)->pluck('highlights', 'id')
+                ->map(function ($highlights) {
+                    return json_decode($highlights, true) ?? [];
+                })->toArray()
             : [];
 
         $customDiscounts = DB::connection('app-manager-failsafe')->table('discount_plan')->where('shop_domain', $shop_domain)
@@ -97,18 +95,18 @@ trait FailsafeHelper {
             $plans[$key]['interval'] = json_decode($plan['interval'], true)['value'];
             $plans[$key]['shopify_plans'] = collect(json_decode($plan['shopify_plans'], true))->pluck('value')->toArray();
             $plans[$key]['features'] = isset($featuresByPlans[$plan['id']]) ? collect($featuresByPlans[$plan['id']])->keyBy('feature_id')->toArray() : null;
-            $plans[$key]['highlights'] = isset($highlightsByPlans[$plan['id']]) ? $highlightsByPlans[$plan['id']]->values()->toArray() : [];;
+            $plans[$key]['highlights'] = $highlightsByPlans[$plan['id']] ?? [];;
             $index = isset($customDiscounts[$plan['id']]) ? $plan['id'] : (isset($customDiscounts[-1]) ? -1 : null);
             if ($index) {
                 $plans[$key]['discount'] = $customDiscounts[$index]['discount'];
                 $plans[$key]['discount_type'] = $customDiscounts[$index]['discount_type'];
                 $plans[$key]['cycle_count'] = $customDiscounts[$index]['cycle_count'];
             }
+
+            $plans[$key]['fail_safe_response'] = true;
         }
 
-        $plans = $this->filterPlansByShopifyPlan($plans, $shopify_plan, $customPlanIds);
-
-        return $plans;
+        return $this->filterPlansByShopifyPlan($plans, $shopify_plan, $customPlanIds);
     }
 
     public function preparePlan($data) {
