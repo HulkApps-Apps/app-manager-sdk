@@ -70,8 +70,7 @@ trait FailsafeHelper {
             $featuresByPlans = collect($featuresByPlans)->groupBy('plan_id')->toArray();
         }
 
-        $planIds = collect($plans)->pluck('id')->toArray();
-        $detailsByPlans = !empty($planIds)
+        $detailsByPlans = !empty($plans)
             ? collect($plans)->pluck('details', 'id')
                 ->map(function ($details) {
                     return json_decode($details, true) ?? [];
