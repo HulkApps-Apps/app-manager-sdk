@@ -71,10 +71,10 @@ trait FailsafeHelper {
         }
 
         $planIds = collect($plans)->pluck('id')->toArray();
-        $highlightsByPlans = !empty($planIds)
-            ? collect($plans)->pluck('highlights', 'id')
-                ->map(function ($highlights) {
-                    return json_decode($highlights, true) ?? [];
+        $detailsByPlans = !empty($planIds)
+            ? collect($plans)->pluck('details', 'id')
+                ->map(function ($details) {
+                    return json_decode($details, true) ?? [];
                 })->toArray()
             : [];
 
@@ -95,7 +95,7 @@ trait FailsafeHelper {
             $plans[$key]['interval'] = json_decode($plan['interval'], true)['value'];
             $plans[$key]['shopify_plans'] = collect(json_decode($plan['shopify_plans'], true))->pluck('value')->toArray();
             $plans[$key]['features'] = isset($featuresByPlans[$plan['id']]) ? collect($featuresByPlans[$plan['id']])->keyBy('feature_id')->toArray() : null;
-            $plans[$key]['highlights'] = $highlightsByPlans[$plan['id']] ?? [];;
+            $plans[$key]['details'] = $detailsByPlans[$plan['id']] ?? [];;
             $index = isset($customDiscounts[$plan['id']]) ? $plan['id'] : (isset($customDiscounts[-1]) ? -1 : null);
             if ($index) {
                 $plans[$key]['discount'] = $customDiscounts[$index]['discount'];
@@ -403,7 +403,7 @@ trait FailsafeHelper {
 
     public function unSerializeData ($data) {
         foreach ($data as $index => $datum) {
-            if (in_array($index, ['interval', 'shopify_plans', 'affiliate', 'features', 'highlights'])) {
+            if (in_array($index, ['interval', 'shopify_plans', 'affiliate', 'features', 'details'])) {
                 $data[$index] = json_decode($datum, true);
             }
         }
