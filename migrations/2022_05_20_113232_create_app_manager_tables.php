@@ -26,6 +26,7 @@ class CreateAppManagerTables extends Migration
 			$table->double('price', 8, 2);
 			$table->string('offer_text')->nullable();
 			$table->string('description')->nullable();
+			$table->string('note')->nullable();
 			$table->text('interval');
 			$table->text('shopify_plans')->nullable();
 			$table->integer('trial_days')->default(0);
@@ -41,6 +42,7 @@ class CreateAppManagerTables extends Migration
 			$table->boolean('choose_later_plan')->nullable();
 			$table->text('affiliate')->nullable();
 			$table->text('feature_plan')->nullable();
+			$table->text('details')->nullable();
             $table->boolean('is_external_charge')->default(false);
             $table->integer('external_charge_limit')->default(10000);
             $table->string('terms')->nullable();
