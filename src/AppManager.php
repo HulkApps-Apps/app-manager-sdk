@@ -53,6 +53,20 @@ class AppManager
         }
     }
 
+    public function getAppFaqs() {
+
+        try {
+            $data = $this->client->get('app-faqs');
+            return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429))
+                ? $data->json()
+                : $this->prepareAppFaqs();
+        }
+        catch (\Exception $e) {
+            report($e);
+            return $this->prepareAppFaqs();
+        }
+    }
+
     public function getPlan($plan_id, $shop_domain = null) {
 
         try {
