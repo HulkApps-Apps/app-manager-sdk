@@ -30,11 +30,14 @@ class CreateAppManagerTables extends Migration
 			$table->text('interval');
 			$table->text('shopify_plans')->nullable();
 			$table->integer('trial_days')->default(0);
+            $table->text('trial_days_text')->nullable();
 			$table->integer('test')->nullable();
 			$table->dateTime('on_install')->nullable();
 			$table->boolean('is_custom')->default(false);
 			$table->unsignedBigInteger('base_plan')->nullable();
 			$table->boolean('public')->default(true);
+            $table->boolean('most_popular')->default(false);
+            $table->text('plan_badge')->nullable();
 			$table->integer('discount')->nullable();
 			$table->smallInteger('cycle_count')->nullable();
 			$table->enum('discount_type', ['amount', 'percentage'])->nullable();
@@ -147,6 +150,14 @@ class CreateAppManagerTables extends Migration
             $table->json('shopify_plans');
             $table->timestamps();
         });
+
+        Schema::create('app_faqs', function (Blueprint $table) {
+            $table->id();
+            $table->text('question');
+            $table->longText('answer');
+            $table->unsignedInteger('sort_order')->default(0);
+            $table->timestamps();
+        });
     }
 
 	/**
@@ -167,5 +178,6 @@ class CreateAppManagerTables extends Migration
 		Schema::dropIfExists('discounts_usage_log');
 		Schema::dropIfExists('discount_plans');
 		Schema::dropIfExists('app_filters');
+		Schema::dropIfExists('app_faqs');
 	}
 }

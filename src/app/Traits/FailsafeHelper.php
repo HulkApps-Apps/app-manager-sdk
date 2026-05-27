@@ -14,6 +14,16 @@ trait FailsafeHelper {
         return head($marketingBannersData)->marketing_banners ?? null;
     }
 
+    public function prepareAppFaqs()
+    {
+        return DB::connection('app-manager-failsafe')
+            ->table('app_faqs')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->toArray();
+    }
+
     public function preparePlans($shop_domain, $active_plan_id = null, $shopify_plan = null) {
 
         $activeChargePrice = $activePlanId = null;

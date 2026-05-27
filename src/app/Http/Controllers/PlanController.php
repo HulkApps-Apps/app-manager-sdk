@@ -47,7 +47,7 @@ class PlanController extends Controller
         $cacheKey = $request->has('shop_domain') ? 'app-manager.plans-'.$request->get('shop_domain') : 'app-manager.all-plans';
 
         $response = appManagerCacheData($cacheKey, function () use ($request, $shopTableName, $storeFieldName, $planFieldName, $shopifyPlanFieldName, $cacheKey, $mostPopularPlanIds, $sdkVersions) {
-            $shopify_plan = $plan = $globalPlan = $plans = $trialActivatedAt = null;
+            $shopify_plan = $plan = $globalPlan = $plans = $trialActivatedAt = $appFaqs = null;
             $choose_later = false;
 
             if ($request->has('shop_domain')) {
@@ -56,6 +56,7 @@ class PlanController extends Controller
                 $shopify_plan = collect($userData)->pluck($shopifyPlanFieldName)->first();
                 $activePlanId = collect($userData)->pluck($planFieldName)->first() ?? null;
                 $plans = \AppManager::getPlans($shopDomain, $activePlanId, $shopify_plan, $sdkVersions);
+                $appFaqs = \AppManager::getAppFaqs();
                 $plan = collect($plans)->where('id', $activePlanId)->first();
                 $trialActivatedAt = collect($userData)->pluck(config('app-manager.field_names.trial_activated_at', 'trial_activated_at'))->first() ?? null;
                 $activeCharge = \AppManager::getCharge($shopDomain);
@@ -100,6 +101,7 @@ class PlanController extends Controller
 
             return [
                 'plans' => $plans,
+                'app_faqs' => $appFaqs,
                 'promotional_discount' => $promotionalDiscount,
                 'shopify_plan' => $shopify_plan,
                 'plan' => $plan,
@@ -309,6 +311,14 @@ class PlanController extends Controller
                 }
                 break;
 
+            case 'app-faqs':
+                DB::connection('app-manager-failsafe')->table('app_faqs')->truncate();
+                $filteredFaqs = $this->filterData($payload, $dateFields, ['pivot', 'app_id']);
+                foreach ($filteredFaqs as $faq) {
+                    DB::connection('app-manager-failsafe')->table('app_faqs')->insert($faq);
+                }
+                break;
+
             default:
                 $tableMap = [
                     'plan-discount' => 'discount_plan',
@@ -397,6 +407,8 @@ class PlanController extends Controller
         }
         $this->batchInsert('app_filters', $appFilters);
 
+        $appFaqs = $this->filterDataForFullFailsafeBackup($data['app_faqs'], $commanFields);
+        $this->batchInsert('app_faqs', $appFaqs);
     }
 
     public function filterData($data, $dateFields = [], $excludeKeys = ['app_id', 'pivot'])
