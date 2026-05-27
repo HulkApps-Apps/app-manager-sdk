@@ -313,7 +313,7 @@ class PlanController extends Controller
 
             case 'app-faqs':
                 DB::connection('app-manager-failsafe')->table('app_faqs')->truncate();
-                $filteredFaqs = $this->filterData($payload, $dateFields, ['pivot']);
+                $filteredFaqs = $this->filterData($payload, $dateFields, ['pivot', 'app_id']);
                 foreach ($filteredFaqs as $faq) {
                     DB::connection('app-manager-failsafe')->table('app_faqs')->insert($faq);
                 }
