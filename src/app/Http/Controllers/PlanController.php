@@ -124,7 +124,7 @@ class PlanController extends Controller
         $shopify_fields = config('app-manager.field_names');
         $search = $data['search'] ?? null;
         $sort = $data['sort'] ?? $shopify_fields['created_at'];
-        $order = $data['order'] ?? 'acs';
+        $order = $data['order'] ?? 'asc';
         $plans = $data['plans'] ?? null;
         $shopify_plans = $data['shopify_plans'] ?? null;
         $itemsPerPage = $data['itemsPerPage'] ?? 25;
@@ -137,13 +137,19 @@ class PlanController extends Controller
         $users = DB::table($tableName)
             ->select($selectedFields)
             ->when($search, function ($q) use ($shopify_fields, $search) {
-            return $q->where(($shopify_fields['name'] ?? 'name'), 'like', '%'.$search.'%')
-                ->orWhere(($shopify_fields['shopify_email'] ?? 'shopify_email'), 'like', '%'.$search.'%');
-        })->when($plans, function ($q) use ($shopify_fields, $plans) {
-            return $q->whereIn(($shopify_fields['plan_id'] ?? 'plan_id'), $plans);
-        })->when($shopify_plans, function ($q) use ($shopify_fields, $shopify_plans) {
-            return $q->whereIn(($shopify_fields['shopify_plan'] ?? 'shopify_plan'), $shopify_plans);
-        })->orderBy($sort, $order)->paginate($itemsPerPage);
+                return $q->where(function ($inner) use ($shopify_fields, $search) {
+                    $inner->where(($shopify_fields['name'] ?? 'name'), 'like', '%' . $search . '%')
+                        ->orWhere(($shopify_fields['shopify_email'] ?? 'shopify_email'), 'like', '%' . $search . '%');
+                });
+            })
+            ->when($plans, function ($q) use ($shopify_fields, $plans) {
+                return $q->whereIn(($shopify_fields['plan_id'] ?? 'plan_id'), $plans);
+            })
+            ->when($shopify_plans, function ($q) use ($shopify_fields, $shopify_plans) {
+                return $q->whereIn(($shopify_fields['shopify_plan'] ?? 'shopify_plan'), $shopify_plans);
+            })
+            ->orderBy($sort, $order)
+            ->paginate($itemsPerPage);
 
         $users->getCollection()->transform(function ($user) use ($shopify_fields) {
             foreach ($shopify_fields as $key => $shopify_field) {
