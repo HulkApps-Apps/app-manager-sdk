@@ -127,7 +127,7 @@ class PlanController extends Controller
         $order = $data['order'] ?? 'asc';
         $plans = $data['plans'] ?? null;
         $shopify_plans = $data['shopify_plans'] ?? null;
-        $itemsPerPage = $data['itemsPerPage'] ?? 25;
+        $itemsPerPage = 25;
         unset($shopify_fields['shopify_token']);
         $selectedFields = array_values($shopify_fields);
         if (empty($selectedFields)) {
