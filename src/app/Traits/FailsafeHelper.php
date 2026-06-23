@@ -231,56 +231,112 @@ trait FailsafeHelper {
         $trialActivatedAt = $data['trial_activated_at'];
         $planId = $data['plan_id'];
         $shopDomain = $data['shop_domain'];
-        $remainingDays = 0;
 
-        if (!empty($trialActivatedAt) && !empty($planId)) {
+        if (empty($planId)) {
+            return null;
+        }
 
-            $trialDays = DB::connection('app-manager-failsafe')->table('plans')
-                ->where('id', $planId)->pluck('trial_days')->first() ?? 0;
+        $planTrialDays = (int) (DB::connection('app-manager-failsafe')->table('plans')
+            ->where('id', $planId)->value('trial_days') ?? 0);
 
-            $trialStartDate = Carbon::parse($trialActivatedAt);
-            $trialEndsDate = $trialStartDate->addDays($trialDays);
+        // Extension stack - sum every record for this plan.
+        $extensionDays = (int) DB::connection('app-manager-failsafe')->table('trial_extension')
+            ->where('shop_domain', $shopDomain)->where('plan_id', $planId)->sum('days');
 
-            if ($trialEndsDate->gte(now())) {
-                $remainingDays = now()->diffInDays($trialEndsDate);
+        $consumed = $this->prepareConsumedTrialDays($shopDomain, $trialActivatedAt);
+
+        return max(0, ($planTrialDays + $extensionDays) - $consumed);
+    }
+
+    /**
+     * Offline mirror of API/PlanController::consumedTrialDays(). Total trial days
+     * already consumed, excluding time spent on a free plan (paused via
+     * charge.cancelled_on). Derived from existing tables only.
+     */
+    public function prepareConsumedTrialDays($shopDomain, $trialActivatedAt = null): int
+    {
+        $windows = [];
+        $earliestChargeStart = null;
+
+        $charges = DB::connection('app-manager-failsafe')->table('charges')
+            ->where('shop_domain', $shopDomain)
+            ->where('trial_days', '>', 0)
+            ->whereNotNull('trial_ends_on')
+            ->get();
+
+        foreach ($charges as $charge) {
+            $trialEnd = Carbon::parse($charge->trial_ends_on);
+            $start = $trialEnd->copy()->subDays((int) $charge->trial_days);
+
+            if ($earliestChargeStart === null || $start->lt($earliestChargeStart)) {
+                $earliestChargeStart = $start;
             }
 
-            $trialExtendData = DB::connection('app-manager-failsafe')->table('trial_extension')
-                ->where('shop_domain', $shopDomain)->where('plan_id', $planId)->orderByDesc('created_at')->first();
-
-            if ($trialExtendData) {
-                $extendTrialStartDate = Carbon::parse($trialExtendData->created_at)->addDays($trialExtendData->days);
-                $remainingExtendedDays = now()->lte($extendTrialStartDate) ? now()->diffInDays($extendTrialStartDate) : 0;
-                $remainingDays = $remainingDays + $remainingExtendedDays;
+            $end = now();
+            if (!empty($charge->cancelled_on)) {
+                $cancelledOn = Carbon::parse($charge->cancelled_on);
+                if ($cancelledOn->lt($end)) {
+                    $end = $cancelledOn;
+                }
+            }
+            if ($trialEnd->lt($end)) {
+                $end = $trialEnd;
+            }
+            if ($end->gt($start)) {
+                $windows[] = [$start, $end];
             }
         }
 
-        $charge = DB::connection('app-manager-failsafe')->table('charges')
-            ->where('shop_domain', $shopDomain)->orderByDesc('created_at')->first();
+        if (!empty($trialActivatedAt)) {
+            $chooseLaterPlan = DB::connection('app-manager-failsafe')->table('plans')
+                ->where('choose_later_plan', true)
+                ->orderByDesc('id')
+                ->first();
 
-        if ($charge && $charge->trial_days) {
-            $trialEndsDate = Carbon::parse($charge->trial_ends_on);
-            if (now()->lte($trialEndsDate)) {
-                $remainingDays = now()->diffInDays($trialEndsDate);
+            if ($chooseLaterPlan && (int) $chooseLaterPlan->trial_days > 0) {
+                $extensionDays = (int) DB::connection('app-manager-failsafe')->table('trial_extension')
+                    ->where('shop_domain', $shopDomain)
+                    ->where('plan_id', $chooseLaterPlan->id)
+                    ->sum('days');
+
+                $length = (int) $chooseLaterPlan->trial_days + $extensionDays;
+                $start = Carbon::parse($trialActivatedAt);
+                $naturalEnd = $start->copy()->addDays($length);
+                $end = now()->lt($naturalEnd) ? now() : $naturalEnd;
+                // No-charge trial ends when the first charge starts.
+                if ($earliestChargeStart !== null && $earliestChargeStart->lt($end)) {
+                    $end = $earliestChargeStart;
+                }
+                if ($end->gt($start)) {
+                    $windows[] = [$start, $end];
+                }
             }
-
-            //ADD EXTRA DAY
-            if(now()->diffInDays(Carbon::parse($charge->created_at)) == 0){
-                $remainingDays++;
-            }
-
-            //TODO: Uncomment this code when we implement Shopify trial extension apis
-
-            /*$trialExtendData = DB::connection('app-manager-failsafe')->table('trial_extension')
-                ->where('shop_domain', $shopDomain)->where('plan_id', $charge->plan_id)->orderBy('created_at')->first();
-            if ($trialExtendData) {
-                $extendTrialStartDate = Carbon::parse($trialExtendData->created_at)->addDays($trialExtendData->days);
-                $remainingExtendedDays = now()->lte($extendTrialStartDate) ? now()->diffInDays($extendTrialStartDate) : 0;
-                $remainingDays = $remainingDays + $remainingExtendedDays;
-            }*/
         }
 
-            return $remainingDays;
+        if (empty($windows)) {
+            return 0;
+        }
+
+        usort($windows, function ($a, $b) {
+            return $a[0] <=> $b[0];
+        });
+
+        $total = 0;
+        [$curStart, $curEnd] = $windows[0];
+
+        foreach (array_slice($windows, 1) as [$start, $end]) {
+            if ($start->lte($curEnd)) {
+                if ($end->gt($curEnd)) {
+                    $curEnd = $end;
+                }
+            } else {
+                $total += $curStart->diffInDays($curEnd);
+                [$curStart, $curEnd] = [$start, $end];
+            }
+        }
+        $total += $curStart->diffInDays($curEnd);
+
+        return (int) $total;
     }
 
     public function getChargeHelper($shop_domain) {

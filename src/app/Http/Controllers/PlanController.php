@@ -110,8 +110,16 @@ class PlanController extends Controller
                 'default_plan_id' => $defaultPlanId,
                 'most_popular_plan_ids' => $mostPopularPlanIds,
                 'choose_later' => $choose_later,
-                'has_active_charge' => (isset($activeCharge['active_charge']) && !empty($activeCharge['active_charge'])) || !$trialActivatedAt,
-                'global_plan_charge' => !empty($plan) && isset($plan['is_global']) && $plan['is_global'] && (isset($activeCharge['active_charge']) && !empty($activeCharge['active_charge']) && !empty($activeCharge['bundle_charge'])),
+                'has_active_charge' => (!empty($activeCharge['active_charge']))
+                    || (!empty($plan) && (float) ($plan['price'] ?? 0) == 0)
+                    || !$trialActivatedAt,
+                'global_plan_charge' => !empty($plan)
+                    && isset($plan['is_global'])
+                    && $plan['is_global']
+                    && (
+                        !empty($activeCharge['active_charge'])
+                        && !empty($activeCharge['bundle_charge'])
+                    ),
             ];
         });
 
@@ -172,10 +180,18 @@ class PlanController extends Controller
             return response()->json(['message' => 'shop domain is required'], 422);
         }
 
+        $trialActivatedAtField = $shopify_fields['trial_activated_at'] ?? 'trial_activated_at';
+        $existingTrialActivatedAt = DB::table($tableName)->where($shopify_fields['name'], $shop_domain)
+            ->value($trialActivatedAtField);
+
         $updateInfo = [
             'plan_id' => $plan_id,
-            'trial_activated_at' => Carbon::now()
         ];
+        // Only stamp the trial start the first time; re-assigning a no-charge plan must
+        // not restart the trial clock (that would hand back trial days already consumed).
+        if (empty($existingTrialActivatedAt)) {
+            $updateInfo['trial_activated_at'] = Carbon::now();
+        }
         if(isset($shopify_fields['total_trial_days'])){
             $plan = \AppManager::getPlan($plan_id);
             if(!empty($plan)){
