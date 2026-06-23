@@ -44,7 +44,7 @@ class ChargeController extends Controller
                     }
                 }
                 $storeGrandfathered = config('app-manager.field_names.grandfathered', 'grandfathered');
-                $userUpdateInfo = [$storePlanField => $plan_id, $storeTrialActivatedAtField => null,$storeGrandfathered => 0];
+                $userUpdateInfo = [$storePlanField => $plan_id, $storeGrandfathered => 0];
                 $shopify_fields = config('app-manager.field_names');
                 if(isset($shopify_fields['total_trial_days'])){
                     $userUpdateInfo[$shopify_fields['total_trial_days']] = $plan['trial_days']?? 0;
@@ -89,28 +89,15 @@ class ChargeController extends Controller
         }
         ';
 
-            $trialDays = $plan['trial_days'] ?? 0;
-
-            if (!empty($shop->$storePlanField) && $trialDays) {
-
-                $remaining = \AppManager::getRemainingDays($shop->$storeNameField, $shop->$storeTrialActivatedAtField, $shop->$storePlanField);
-                if($remaining !== null){
-                    if($shop->$storePlanField != null){
-                        $currentPlan = \AppManager::getPlan($shop->$storePlanField);
-                        if (!empty($currentPlan) && !empty($currentPlan['trial_days'])) {
-                            $usedDays = $currentPlan['trial_days'] - $remaining;
-                            if ($usedDays > 0) {
-                                $days = $trialDays - $usedDays;
-                                $trialDays = $days > 0 ? $days : 0;
-                            }
-                        }
-                    }else{
-                        $trialDays = $remaining;
-                    }
-                }
-                //$trialDays = $remaining !== null ? $remaining : $trialDays;
+            $trialDays = (int) ($plan['trial_days'] ?? 0);
+            $remaining = \AppManager::getRemainingDays(
+                $shop->$storeNameField,
+                $shop->$storeTrialActivatedAtField,
+                $plan_id
+            );
+            if (is_numeric($remaining)) {
+                $trialDays = max(0, (int) $remaining);
             }
-
 
             $shopifyPlan = $shop->$storeShopifyPlanField;
 
@@ -344,7 +331,7 @@ class ChargeController extends Controller
             $plan = \AppManager::getPlan($request->plan_id, $request->shop);
 
             $storeGrandfathered = config('app-manager.field_names.grandfathered', 'grandfathered');
-            $userUpdateInfo = [$storePlanField => $request->plan_id, $storeTrialActivatedAtField => null,$storeGrandfathered => 0];
+            $userUpdateInfo = [$storePlanField => $request->plan_id, $storeGrandfathered => 0];
             $shopify_fields = config('app-manager.field_names');
             if(isset($shopify_fields['total_trial_days'])){
                 $userUpdateInfo[$shopify_fields['total_trial_days']] = $plan['trial_days']?? 0;
@@ -375,7 +362,7 @@ class ChargeController extends Controller
 
         if ($shop) {
             $storeGrandfathered = config('app-manager.field_names.grandfathered', 'grandfathered');
-            $userUpdateInfo = [$storePlanField => $request->free_plan_id ?? null, $storeTrialActivatedAtField => null,$storeGrandfathered => 0];
+            $userUpdateInfo = [$storePlanField => $request->free_plan_id ?? null, $storeGrandfathered => 0];
             $shopify_fields = config('app-manager.field_names');
             if(isset($shopify_fields['total_trial_days'])){
                 $userUpdateInfo[$shopify_fields['total_trial_days']] =  0;
