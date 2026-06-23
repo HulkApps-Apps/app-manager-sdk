@@ -89,13 +89,15 @@ class ChargeController extends Controller
         }
         ';
 
-            $trialDays = (int) \AppManager::getRemainingDays(
+            $trialDays = (int) ($plan['trial_days'] ?? 0);
+            $remaining = \AppManager::getRemainingDays(
                 $shop->$storeNameField,
                 $shop->$storeTrialActivatedAtField,
                 $plan_id
             );
-            $trialDays = max(0, $trialDays);
-
+            if (is_numeric($remaining)) {
+                $trialDays = max(0, (int) $remaining);
+            }
 
             $shopifyPlan = $shop->$storeShopifyPlanField;
 
