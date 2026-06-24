@@ -103,6 +103,7 @@ class CreateAppManagerTables extends Migration
             $table->unsignedBigInteger('plan_id');
             $table->unsignedBigInteger('created_by');
             $table->string('shop_domain');
+            $table->boolean('used')->default(false);
             $table->timestamps();
         });
 

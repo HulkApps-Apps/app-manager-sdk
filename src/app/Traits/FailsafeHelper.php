@@ -40,7 +40,7 @@ trait FailsafeHelper {
         }
 
         $customPlanIds = DB::connection('app-manager-failsafe')->table('plan_user')
-            ->where('shop_domain', $shop_domain)->pluck('plan_id')->toArray();
+            ->where('shop_domain', $shop_domain)->where('used', false)->pluck('plan_id')->toArray();
         array_push($customPlanIds, $activePlanId ?? null);
         $customPlanBaseIds = DB::connection('app-manager-failsafe')->table('plans')
             ->whereIn('id', $customPlanIds)->whereNotNull('base_plan')->pluck('base_plan')->toArray();
@@ -485,7 +485,7 @@ trait FailsafeHelper {
             return ['has_plan' => true];
         }
 
-        $remainingDays = $this->getRemainingDays([
+        $remainingDays = $this->prepareRemainingDays([
             'trial_activated_at' => $data['trial_activated_at'],
             'plan_id' => $data['plan_id'],
             'shop_domain' => $data['shop_domain']
