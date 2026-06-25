@@ -10,11 +10,17 @@ use HulkApps\AppManager\GraphQL\GraphQL;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use function HulkApps\AppManager\app\deleteAppManagerCache;
 
 class ChargeController extends Controller
 {
+    private function chargeSnapshotCacheKey($shop, $timestamp): string
+    {
+        return 'app-manager:charge-snapshot:' . $shop . ':' . $timestamp;
+    }
+
     public function process(Request $request, $plan_id)
     {
 
@@ -172,9 +178,16 @@ class ChargeController extends Controller
                 }
             }
 
-            $requestData = ['shop' => $shop->$storeNameField, 'timestamp' => now()->unix() * 1000, 'plan' => $plan_id];
+            $chargeTimestamp = now()->unix() * 1000;
+            $requestData = ['shop' => $shop->$storeNameField, 'timestamp' => $chargeTimestamp, 'plan' => $plan_id];
 
-            $requestData = array_merge($requestData, $discountSnapshot);
+            if (!empty($discountSnapshot)) {
+                Cache::put(
+                    $this->chargeSnapshotCacheKey($shop->$storeNameField, $chargeTimestamp),
+                    $discountSnapshot,
+                    now()->addHour()
+                );
+            }
 
             if($request->has('old_plan') && !empty($request->old_plan)){
                 $requestData['old_plan'] = $request->old_plan;
@@ -285,11 +298,15 @@ class ChargeController extends Controller
             $charge['shop_domain'] = $request->shop;
             $charge['interval'] = $plan['interval']['value'];
 
-            foreach (['discount_value', 'discount_type', 'discount_duration_intervals', 'discount_source', 'promotional_discount_id'] as $snapshotField) {
-                $value = $request->get($snapshotField);
-                if ($value !== null && $value !== '') {
-                    $charge[$snapshotField] = $value;
+            $snapshotKey = $this->chargeSnapshotCacheKey($request->shop, $request->timestamp);
+            $discountSnapshot = Cache::get($snapshotKey);
+            if (is_array($discountSnapshot)) {
+                foreach ($discountSnapshot as $field => $value) {
+                    if ($value !== null && $value !== '') {
+                        $charge[$field] = $value;
+                    }
                 }
+                Cache::forget($snapshotKey);
             }
 
             /*if (!empty($shop->$storePlanField)) {
