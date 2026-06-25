@@ -88,6 +88,7 @@ trait FailsafeHelper {
             : [];
 
         $customDiscounts = DB::connection('app-manager-failsafe')->table('discount_plan')->where('shop_domain', $shop_domain)
+            ->where('used', false)
             ->orderByDesc('created_at')->get(['plan_id','discount', 'discount_type', 'cycle_count'])->first();
         if ($customDiscounts) {
             $customDiscounts = json_decode(json_encode($customDiscounts), true);
@@ -127,7 +128,7 @@ trait FailsafeHelper {
 
         if ($planData && $shopDomain) {
             $customDiscounts = DB::connection('app-manager-failsafe')->table('discount_plan')
-                ->where('shop_domain', $shopDomain)->select(['plan_id', 'discount', 'discount_type', 'cycle_count'])->first();
+                ->where('shop_domain', $shopDomain)->where('used', false)->select(['plan_id', 'discount', 'discount_type', 'cycle_count'])->first();
             $customDiscounts = json_decode(json_encode($customDiscounts), true);
             if (!empty($customDiscounts) && ($customDiscounts['plan_id'] == -1 || $planData['id'] == $customDiscounts['plan_id'])) {
                 $planData['discount'] = isset($customDiscounts['discount']) ? $customDiscounts['discount'] : $planData['discount'];
@@ -342,10 +343,85 @@ trait FailsafeHelper {
     public function getChargeHelper($shop_domain) {
         $chargeData = DB::connection('app-manager-failsafe')->table('charges')
             ->where('shop_domain', $shop_domain)->get();
+
+        $activeCharge = collect($chargeData->where('status', 'active')->first())->toArray();
+        if (!empty($activeCharge)) {
+            $activeCharge = array_merge($activeCharge, $this->effectiveChargePricing($activeCharge));
+        }
+
         return [
-            'active_charge' => collect($chargeData->where('status', 'active')->first())->toArray(),
+            'active_charge' => $activeCharge,
             'cancelled_charge' => collect($chargeData->where('status', 'cancelled')->sortByDesc('created_at')->first())->toArray()
         ];
+    }
+
+    public function effectiveChargePricing(array $charge): array
+    {
+        $base = round((float) ($charge['price'] ?? 0), 2);
+
+        $noDiscount = [
+            'effective_price' => $base,
+            'strike_price' => null,
+            'is_discount_active' => false,
+            'remaining_intervals' => null,
+            'discount_ends_on' => null,
+        ];
+
+        try {
+            $now = Carbon::now();
+
+            $value = $charge['discount_value'] ?? null;
+            if (empty($value) || (float) $value <= 0) {
+                return $noDiscount;
+            }
+
+            $type = $charge['discount_type'] ?? 'percentage';
+            $discounted = $type === 'percentage'
+                ? $base - ($base * (float) $value / 100)
+                : $base - (float) $value;
+            $discounted = round(max(0, $discounted), 2);
+
+            $duration = (int) ($charge['discount_duration_intervals'] ?? 0);
+
+            if ($duration <= 0) {
+                return [
+                    'effective_price' => $discounted,
+                    'strike_price' => $base,
+                    'is_discount_active' => true,
+                    'remaining_intervals' => null,
+                    'discount_ends_on' => null,
+                ];
+            }
+
+            $anchorValue = $charge['trial_ends_on'] ?? $charge['activated_on'] ?? $charge['created_at'] ?? null;
+            $anchor = $anchorValue ? Carbon::parse($anchorValue) : $now->copy();
+
+            $intervalDays = ($charge['interval'] ?? null) === 'ANNUAL' ? 365 : 30;
+            $elapsed = (int) floor(max(0, $anchor->diffInDays($now, false)) / $intervalDays);
+            $endsOn = $anchor->copy()->addDays($duration * $intervalDays)->toDateString();
+
+            if ($elapsed >= $duration) {
+                return [
+                    'effective_price' => $base,
+                    'strike_price' => null,
+                    'is_discount_active' => false,
+                    'remaining_intervals' => 0,
+                    'discount_ends_on' => $endsOn,
+                ];
+            }
+
+            return [
+                'effective_price' => $discounted,
+                'strike_price' => $base,
+                'is_discount_active' => true,
+                'remaining_intervals' => $duration - $elapsed,
+                'discount_ends_on' => $endsOn,
+            ];
+        } catch (\Throwable $e) {
+            report($e);
+
+            return $noDiscount;
+        }
     }
 
     public function storeChargeHelper($data) {

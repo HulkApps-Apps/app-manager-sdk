@@ -152,7 +152,29 @@ class ChargeController extends Controller
 
             $promotionalDiscountId = $plan['discount'] && $promotionalDiscount ? 0 : ($promotionalDiscount ? $promotionalDiscount['id'] : 0);
 
+            $discountSnapshot = [];
+            if (!empty($discount)) {
+                if ($plan['discount']) {
+                    $discountSnapshot = [
+                        'discount_value' => (float) $plan['discount'],
+                        'discount_type' => $plan['discount_type'] ?? 'percentage',
+                        'discount_duration_intervals' => (int) ($plan['cycle_count'] ?? 0),
+                        'discount_source' => 'plan',
+                    ];
+                } elseif (!empty($promotionalDiscount)) {
+                    $discountSnapshot = [
+                        'discount_value' => (float) $promotionalDiscount['value'],
+                        'discount_type' => $promotionalDiscount['type'] ?? 'percentage',
+                        'discount_duration_intervals' => (int) ($promotionalDiscount['duration_intervals'] ?? 0),
+                        'discount_source' => 'promotional',
+                        'promotional_discount_id' => (int) ($promotionalDiscount['id'] ?? 0),
+                    ];
+                }
+            }
+
             $requestData = ['shop' => $shop->$storeNameField, 'timestamp' => now()->unix() * 1000, 'plan' => $plan_id];
+
+            $requestData = array_merge($requestData, $discountSnapshot);
 
             if($request->has('old_plan') && !empty($request->old_plan)){
                 $requestData['old_plan'] = $request->old_plan;
@@ -262,6 +284,13 @@ class ChargeController extends Controller
             $charge['plan_id'] = $request->plan;
             $charge['shop_domain'] = $request->shop;
             $charge['interval'] = $plan['interval']['value'];
+
+            foreach (['discount_value', 'discount_type', 'discount_duration_intervals', 'discount_source', 'promotional_discount_id'] as $snapshotField) {
+                $value = $request->get($snapshotField);
+                if ($value !== null && $value !== '') {
+                    $charge[$snapshotField] = $value;
+                }
+            }
 
             /*if (!empty($shop->$storePlanField)) {
                 \AppManager::cancelCharge($request->shop, $shop->$storePlanField);

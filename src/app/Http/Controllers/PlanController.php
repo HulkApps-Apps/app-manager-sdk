@@ -99,6 +99,25 @@ class PlanController extends Controller
 
             $appBundleData = \AppManager::getAppBundleData();
 
+            $activeChargePricing = isset($activeCharge['active_charge']['effective_price']) ? [
+                'plan_id' => $activeCharge['active_charge']['plan_id'] ?? null,
+                'interval' => $activeCharge['active_charge']['interval'] ?? null,
+                'effective_price' => $activeCharge['active_charge']['effective_price'],
+                'strike_price' => $activeCharge['active_charge']['strike_price'] ?? null,
+                'is_discount_active' => $activeCharge['active_charge']['is_discount_active'] ?? false,
+                'discount_ends_on' => $activeCharge['active_charge']['discount_ends_on'] ?? null,
+                'remaining_intervals' => $activeCharge['active_charge']['remaining_intervals'] ?? null,
+            ] : null;
+
+            if (!empty($activeChargePricing)) {
+                if (is_array($plans)) {
+                    $plans = array_map(function ($p) use ($activeChargePricing) {
+                        return $this->withActiveChargePricing($p, $activeChargePricing);
+                    }, $plans);
+                }
+                $plan = $this->withActiveChargePricing($plan, $activeChargePricing);
+            }
+
             return [
                 'plans' => $plans,
                 'app_faqs' => $appFaqs,
@@ -124,6 +143,19 @@ class PlanController extends Controller
         });
 
         return response()->json($response);
+    }
+
+    private function withActiveChargePricing($plan, array $pricing)
+    {
+        if (empty($plan) || !is_array($plan)) {
+            return $plan;
+        }
+        $matchesPlan = (string) ($plan['id'] ?? '') === (string) ($pricing['plan_id'] ?? '');
+        $matchesInterval = empty($pricing['interval']) || ($plan['interval'] ?? null) === $pricing['interval'];
+        if ($matchesPlan && $matchesInterval) {
+            $plan['active_charge_pricing'] = $pricing;
+        }
+        return $plan;
     }
 
     public function users(Request $request) {

@@ -62,6 +62,11 @@ class CreateAppManagerTables extends Migration
 			$table->string('name')->nullable();
 			$table->string('type');
 			$table->double('price', 8, 2);
+			$table->decimal('discount_value', 8, 2)->nullable();
+			$table->string('discount_type')->nullable();
+			$table->integer('discount_duration_intervals')->nullable();
+			$table->string('discount_source')->nullable();
+			$table->unsignedBigInteger('promotional_discount_id')->nullable();
 			$table->enum('interval', ['EVERY_30_DAYS', 'ANNUAL']);
 			$table->integer('trial_days')->nullable();
 			$table->dateTime('billing_on')->nullable();
@@ -85,6 +90,7 @@ class CreateAppManagerTables extends Migration
 			$table->unsignedBigInteger('created_by');
 			$table->string('shop_domain');
 			$table->bigInteger('plan_id')->nullable();
+			$table->boolean('used')->default(false);
 			$table->timestamps();
 		});
 
