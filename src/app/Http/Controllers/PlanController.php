@@ -107,6 +107,9 @@ class PlanController extends Controller
                 'is_discount_active' => $activeCharge['active_charge']['is_discount_active'] ?? false,
                 'discount_ends_on' => $activeCharge['active_charge']['discount_ends_on'] ?? null,
                 'remaining_intervals' => $activeCharge['active_charge']['remaining_intervals'] ?? null,
+                'discount_value' => $activeCharge['active_charge']['discount_value'] ?? null,
+                'discount_type' => $activeCharge['active_charge']['discount_type'] ?? null,
+                'discount_duration_intervals' => $activeCharge['active_charge']['discount_duration_intervals'] ?? null,
             ] : null;
 
             if (!empty($activeChargePricing)) {
