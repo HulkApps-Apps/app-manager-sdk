@@ -111,6 +111,7 @@ trait FailsafeHelper {
                 $plans[$key]['discount'] = $customDiscounts[$index]['discount'];
                 $plans[$key]['discount_type'] = $customDiscounts[$index]['discount_type'];
                 $plans[$key]['cycle_count'] = $customDiscounts[$index]['cycle_count'];
+                $plans[$key]['discount_is_custom'] = true;
             }
 
             $plans[$key]['fail_safe_response'] = true;
@@ -131,9 +132,10 @@ trait FailsafeHelper {
                 ->where('shop_domain', $shopDomain)->where('used', false)->select(['plan_id', 'discount', 'discount_type', 'cycle_count'])->first();
             $customDiscounts = json_decode(json_encode($customDiscounts), true);
             if (!empty($customDiscounts) && ($customDiscounts['plan_id'] == -1 || $planData['id'] == $customDiscounts['plan_id'])) {
-                $planData['discount'] = isset($customDiscounts['discount']) ? $customDiscounts['discount'] : $planData['discount'];
-                $planData['discount_type'] = isset($customDiscounts['discount_type']) ? $customDiscounts['discount_type'] : $planData['discount_type'];
-                $planData['cycle_count'] = isset($customDiscounts['cycle_count']) ? $customDiscounts['cycle_count'] : $planData['cycle_count'];
+                $planData['discount'] = !empty($customDiscounts['discount']) ? $customDiscounts['discount'] : $planData['discount'];
+                $planData['discount_type'] = !empty($customDiscounts['discount_type']) ? $customDiscounts['discount_type'] : $planData['discount_type'];
+                $planData['cycle_count'] = !empty($customDiscounts['cycle_count']) ? $customDiscounts['cycle_count'] : $planData['cycle_count'];
+                $planData['discount_is_custom'] = true;
             }
         }
 

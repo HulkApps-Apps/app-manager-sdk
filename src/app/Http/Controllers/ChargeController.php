@@ -126,8 +126,24 @@ class ChargeController extends Controller
                 }
             }
 
+            $promoApplies = !empty($promotionalDiscount)
+                && (float) ($promotionalDiscount['value'] ?? 0) > 0
+                && empty($plan['is_global'])
+                && (empty($promotionalDiscount['plan_relation']) || in_array($plan['id'], $promotionalDiscount['plan_relation']));
+
             $discount = [];
-            if($plan['discount']){
+            if ($promoApplies) {
+                $discount_type = $promotionalDiscount['type'] ?? "percentage";
+
+                $discount = [
+                    'value' => [
+                        $discount_type => $discount_type === "percentage" ? (float)$promotionalDiscount['value'] / 100 : ($promotionalDiscount['value'] <= $plan['price'] ? $promotionalDiscount['value'] : $plan['price']),
+                    ],
+                ];
+                if((int)$promotionalDiscount['duration_intervals']){
+                    $discount['durationLimitInIntervals'] = (int)$promotionalDiscount['duration_intervals'];
+                }
+            } elseif ($plan['discount']) {
                 $discount_type = $plan['discount_type'] ?? "percentage";
 
                 $discount = [
@@ -138,42 +154,26 @@ class ChargeController extends Controller
                 if((int)$plan['cycle_count']){
                     $discount['durationLimitInIntervals'] = (int)$plan['cycle_count'];
                 }
-            }elseif ($promotionalDiscount){
-                if(($promotionalDiscount['plan_relation'] && !in_array($plan['id'], $promotionalDiscount['plan_relation'])) || $plan['is_global']){
-                    $discount = [];
-                }
-                else{
-                    $discount_type = $promotionalDiscount['type'] ?? "percentage";
-
-                    $discount =[
-                        'value' => [
-                            $discount_type => $discount_type === "percentage" ? (float)$promotionalDiscount['value'] / 100 : ($promotionalDiscount['value'] <= $plan['price'] ? $promotionalDiscount['value'] : $plan['price']),
-                        ],
-                    ];
-                    if((int)$promotionalDiscount['duration_intervals']){
-                        $discount['durationLimitInIntervals'] = (int)$promotionalDiscount['duration_intervals'];
-                    }
-                }
             }
 
-            $promotionalDiscountId = $plan['discount'] && $promotionalDiscount ? 0 : ($promotionalDiscount ? $promotionalDiscount['id'] : 0);
+            $promotionalDiscountId = $promoApplies ? ($promotionalDiscount['id'] ?? 0) : 0;
 
             $discountSnapshot = [];
             if (!empty($discount)) {
-                if ($plan['discount']) {
-                    $discountSnapshot = [
-                        'discount_value' => (float) $plan['discount'],
-                        'discount_type' => $plan['discount_type'] ?? 'percentage',
-                        'discount_duration_intervals' => (int) ($plan['cycle_count'] ?? 0),
-                        'discount_source' => 'plan',
-                    ];
-                } elseif (!empty($promotionalDiscount)) {
+                if ($promoApplies) {
                     $discountSnapshot = [
                         'discount_value' => (float) $promotionalDiscount['value'],
                         'discount_type' => $promotionalDiscount['type'] ?? 'percentage',
                         'discount_duration_intervals' => (int) ($promotionalDiscount['duration_intervals'] ?? 0),
                         'discount_source' => 'promotional',
                         'promotional_discount_id' => (int) ($promotionalDiscount['id'] ?? 0),
+                    ];
+                } elseif ($plan['discount']) {
+                    $discountSnapshot = [
+                        'discount_value' => (float) $plan['discount'],
+                        'discount_type' => $plan['discount_type'] ?? 'percentage',
+                        'discount_duration_intervals' => (int) ($plan['cycle_count'] ?? 0),
+                        'discount_source' => !empty($plan['discount_is_custom']) ? 'custom' : 'plan',
                     ];
                 }
             }
@@ -236,7 +236,7 @@ class ChargeController extends Controller
                 ],
             ];
 
-            //allow to add additional charge
+            //allow adding additional charge
             if($plan['interval']['value'] == 'EVERY_30_DAYS' && isset($plan['is_external_charge']) && $plan['is_external_charge']){
                 $cappedAmount = ($request->has('capped_amount') && $request->capped_amount > 0)?$request->capped_amount:$plan['external_charge_limit'];
                 $terms = ($request->has('terms') && $request->terms !== null)?$request->terms:$plan['terms'];

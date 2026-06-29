@@ -14,6 +14,9 @@ All notable changes to `appmanager` will be documented in this file
   payload the frontend already consumes.
 - Custom discounts are now one-time: added `discount_plan.used`; a consumed custom
   discount is no longer offered (`getPlans`/`getPlan`).
+- The charge discount snapshot now distinguishes a custom discount from a plan's
+  own discount: plans carry a `discount_is_custom` flag and the snapshot records
+  `discount_source` as `custom`, `plan`, or `promotional`.
 
 ## 1.0.0
 
