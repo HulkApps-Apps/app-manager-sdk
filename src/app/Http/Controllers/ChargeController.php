@@ -10,11 +10,17 @@ use HulkApps\AppManager\GraphQL\GraphQL;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use function HulkApps\AppManager\app\deleteAppManagerCache;
 
 class ChargeController extends Controller
 {
+    private function chargeSnapshotCacheKey($shop, $timestamp): string
+    {
+        return 'app-manager:charge-snapshot:' . $shop . ':' . $timestamp;
+    }
+
     public function process(Request $request, $plan_id)
     {
 
@@ -120,8 +126,24 @@ class ChargeController extends Controller
                 }
             }
 
+            $promoApplies = !empty($promotionalDiscount)
+                && (float) ($promotionalDiscount['value'] ?? 0) > 0
+                && empty($plan['is_global'])
+                && (empty($promotionalDiscount['plan_relation']) || in_array($plan['id'], $promotionalDiscount['plan_relation']));
+
             $discount = [];
-            if($plan['discount']){
+            if ($promoApplies) {
+                $discount_type = $promotionalDiscount['type'] ?? "percentage";
+
+                $discount = [
+                    'value' => [
+                        $discount_type => $discount_type === "percentage" ? (float)$promotionalDiscount['value'] / 100 : ($promotionalDiscount['value'] <= $plan['price'] ? $promotionalDiscount['value'] : $plan['price']),
+                    ],
+                ];
+                if((int)$promotionalDiscount['duration_intervals']){
+                    $discount['durationLimitInIntervals'] = (int)$promotionalDiscount['duration_intervals'];
+                }
+            } elseif ($plan['discount']) {
                 $discount_type = $plan['discount_type'] ?? "percentage";
 
                 $discount = [
@@ -132,27 +154,40 @@ class ChargeController extends Controller
                 if((int)$plan['cycle_count']){
                     $discount['durationLimitInIntervals'] = (int)$plan['cycle_count'];
                 }
-            }elseif ($promotionalDiscount){
-                if(($promotionalDiscount['plan_relation'] && !in_array($plan['id'], $promotionalDiscount['plan_relation'])) || $plan['is_global']){
-                    $discount = [];
-                }
-                else{
-                    $discount_type = $promotionalDiscount['type'] ?? "percentage";
+            }
 
-                    $discount =[
-                        'value' => [
-                            $discount_type => $discount_type === "percentage" ? (float)$promotionalDiscount['value'] / 100 : ($promotionalDiscount['value'] <= $plan['price'] ? $promotionalDiscount['value'] : $plan['price']),
-                        ],
+            $promotionalDiscountId = $promoApplies ? ($promotionalDiscount['id'] ?? 0) : 0;
+
+            $discountSnapshot = [];
+            if (!empty($discount)) {
+                if ($promoApplies) {
+                    $discountSnapshot = [
+                        'discount_value' => (float) $promotionalDiscount['value'],
+                        'discount_type' => $promotionalDiscount['type'] ?? 'percentage',
+                        'discount_duration_intervals' => (int) ($promotionalDiscount['duration_intervals'] ?? 0),
+                        'discount_source' => 'promotional',
+                        'promotional_discount_id' => (int) ($promotionalDiscount['id'] ?? 0),
                     ];
-                    if((int)$promotionalDiscount['duration_intervals']){
-                        $discount['durationLimitInIntervals'] = (int)$promotionalDiscount['duration_intervals'];
-                    }
+                } elseif ($plan['discount']) {
+                    $discountSnapshot = [
+                        'discount_value' => (float) $plan['discount'],
+                        'discount_type' => $plan['discount_type'] ?? 'percentage',
+                        'discount_duration_intervals' => (int) ($plan['cycle_count'] ?? 0),
+                        'discount_source' => !empty($plan['discount_is_custom']) ? 'custom' : 'plan',
+                    ];
                 }
             }
 
-            $promotionalDiscountId = $plan['discount'] && $promotionalDiscount ? 0 : ($promotionalDiscount ? $promotionalDiscount['id'] : 0);
+            $chargeTimestamp = now()->unix() * 1000;
+            $requestData = ['shop' => $shop->$storeNameField, 'timestamp' => $chargeTimestamp, 'plan' => $plan_id];
 
-            $requestData = ['shop' => $shop->$storeNameField, 'timestamp' => now()->unix() * 1000, 'plan' => $plan_id];
+            if (!empty($discountSnapshot)) {
+                Cache::put(
+                    $this->chargeSnapshotCacheKey($shop->$storeNameField, $chargeTimestamp),
+                    $discountSnapshot,
+                    now()->addHour()
+                );
+            }
 
             if($request->has('old_plan') && !empty($request->old_plan)){
                 $requestData['old_plan'] = $request->old_plan;
@@ -201,7 +236,7 @@ class ChargeController extends Controller
                 ],
             ];
 
-            //allow to add additional charge
+            //allow adding additional charge
             if($plan['interval']['value'] == 'EVERY_30_DAYS' && isset($plan['is_external_charge']) && $plan['is_external_charge']){
                 $cappedAmount = ($request->has('capped_amount') && $request->capped_amount > 0)?$request->capped_amount:$plan['external_charge_limit'];
                 $terms = ($request->has('terms') && $request->terms !== null)?$request->terms:$plan['terms'];
@@ -262,6 +297,17 @@ class ChargeController extends Controller
             $charge['plan_id'] = $request->plan;
             $charge['shop_domain'] = $request->shop;
             $charge['interval'] = $plan['interval']['value'];
+
+            $snapshotKey = $this->chargeSnapshotCacheKey($request->shop, $request->timestamp);
+            $discountSnapshot = Cache::get($snapshotKey);
+            if (is_array($discountSnapshot)) {
+                foreach ($discountSnapshot as $field => $value) {
+                    if ($value !== null && $value !== '') {
+                        $charge[$field] = $value;
+                    }
+                }
+                Cache::forget($snapshotKey);
+            }
 
             /*if (!empty($shop->$storePlanField)) {
                 \AppManager::cancelCharge($request->shop, $shop->$storePlanField);
