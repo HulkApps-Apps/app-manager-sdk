@@ -64,6 +64,13 @@ class ChargeController extends Controller
                 } catch (\Exception $exception) {
                     report($exception);
                 }
+                if (empty($plan['public'])) {
+                    try {
+                        \AppManager::markCustomPlanUsed($request->shop, $plan_id);
+                    } catch (\Exception $exception) {
+                        report($exception);
+                    }
+                }
                 deleteAppManagerCache();
                 return response()->json(['status' => true,'plan_type' =>'free_plan']);
             }

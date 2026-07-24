@@ -153,6 +153,21 @@ class AppManager
         }
     }
 
+    public function markCustomPlanUsed($shop_domain, $plan_id) {
+
+        try {
+            $data = $this->client->post('mark-custom-plan-used', [
+                'shop_domain' => $shop_domain,
+                'plan_id' => $plan_id,
+            ]);
+            return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->markCustomPlanUsedHelper($shop_domain, $plan_id);
+        }
+        catch (\Exception $e) {
+            report($e);
+            return $this->markCustomPlanUsedHelper($shop_domain, $plan_id);
+        }
+    }
+
     public function updateCharge($shop_domain, $plan_id) {
         try {
             $data = $this->client->post('update-charge', [
