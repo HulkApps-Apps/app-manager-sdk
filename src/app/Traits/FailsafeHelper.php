@@ -444,6 +444,13 @@ trait FailsafeHelper {
         return ['message' => $charge ? 'success' : 'fail'];
     }
 
+    public function markCustomPlanUsedHelper($shop_domain, $plan_id) {
+        $updated = DB::connection('app-manager-failsafe')->table('plan_user')
+            ->where('shop_domain', $shop_domain)->where('plan_id', $plan_id)->where('used', false)
+            ->update(['used' => true, 'updated_at' => Carbon::now()]);
+        return ['message' => 'success', 'updated' => (bool) $updated];
+    }
+
     public function storePromotionalDiscountHelper($shop, $discount_id){
         $data['discount_id'] = $discount_id;
         $data['domain'] = $shop;
