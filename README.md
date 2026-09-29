@@ -127,6 +127,47 @@ Set total_trial_days field name in config/app-manager.php
 'total_trial_days' => env('TOTAL_TRIAL_DAYS', 'toal_trial_days'),
 ```
 
+### Shopify expiring offline access tokens
+
+Shopify requires public apps to use **expiring offline access tokens** from
+1 January 2027. They live 60 minutes and carry a refresh token, so a token read
+straight from the database can be dead by the time it is used.
+
+The SDK does not store or renew tokens itself — your app does. Tell the SDK
+where to get a live token by implementing the contract and pointing the config
+at it. **Apps still on non-expiring tokens need do nothing.**
+
+```php
+use HulkApps\AppManager\Contracts\ShopifyTokenResolver;
+
+class MyTokenResolver implements ShopifyTokenResolver
+{
+    // A token valid right now; renew it here if it is at or near expiry.
+    public function token(string $shopDomain): ?string { /* ... */ }
+
+    // Shopify rejected that token. Return a working replacement, or null.
+    // The SDK replays the call once, and only if this differs from the rejected one.
+    public function refresh(string $shopDomain): ?string { /* ... */ }
+}
+```
+
+```php
+// config/app-manager.php
+'shopify_token_resolver' => \App\Services\MyTokenResolver::class,
+'shopify_timeout' => 20, // seconds per Shopify call; lower it on serverless hosts
+```
+
+Both methods are called from web requests and queued work alike, so they must
+be safe to call concurrently for the same shop — serialize renewals per shop.
+
+**Your storage is your own.** The SDK asks for a string and never looks at your
+schema, so how you keep tokens is entirely up to you: whatever columns you like,
+under whatever names, in whatever table — or in a cache or a vault instead. The
+SDK has no concept of a refresh token, an expiry or a token state, so nothing
+needs to match another app's naming. The only column name it still knows is
+`field_names.shopify_token`, used by the default resolver for apps that bind
+none.
+
 ### Testing
 
 ```bash

@@ -4,6 +4,8 @@ namespace HulkApps\AppManager\GraphQL;
 
 use HulkApps\AppManager\Client\Client;
 use HulkApps\AppManager\Exception\GraphQLException;
+use HulkApps\AppManager\Exception\MissingShopException;
+use HulkApps\AppManager\Shopify\ShopifyApi;
 
 class GraphQLRequest
 {
@@ -61,11 +63,12 @@ class GraphQLRequest
         });
     }
 
-    public function client() {
+    public function client($token = null) {
 
         $shop = $this->shop[$this->shopNameField] ?? null;
 
-        $token = $this->shop[$this->shopTokenField] ?? null;
+        // The row's own column is only the fallback, so direct callers still work.
+        $token = $token ?: ($this->shop[$this->shopTokenField] ?? null);
 
         $apiVersion = $this->apiVersion;
 
@@ -74,15 +77,33 @@ class GraphQLRequest
             throw new GraphQLException("Missing shop name or token");
         }
 
-        return Client::withHeaders(['x-shopify-access-token' => $token, 'Accept' => 'application/json'])->baseUri("https://$shop/admin/api/$apiVersion/graphql.json");
+        return Client::withHeaders(['x-shopify-access-token' => $token, 'Accept' => 'application/json'])
+            ->timeout(ShopifyApi::timeout())
+            ->baseUri("https://$shop/admin/api/$apiVersion/graphql.json");
     }
 
     public function send() {
 
-        $response = $this->client()->post('', array_filter([
-            'query' => $this->query,
-            'variables' => $this->params
-        ]))->json();
+        $shop = $this->shop[$this->shopNameField] ?? null;
+
+        if (empty($shop)) {
+
+            throw new GraphQLException("Missing shop name or token");
+        }
+
+        // Kept whole until after the retry: decoding here would lose the status.
+        try {
+            $response = app(ShopifyApi::class)->withToken($shop, function ($token) {
+
+                return $this->client($token)->post('', array_filter([
+                    'query' => $this->query,
+                    'variables' => $this->params
+                ]));
+            }, $this->shop[$this->shopTokenField] ?? null)->json();
+        } catch (MissingShopException $exception) {
+
+            throw new GraphQLException("Missing shop name or token");
+        }
 
         if (!empty($response['errors']) && $response['errors'] !== false) {
 

@@ -6,6 +6,30 @@ use HulkApps\AppManager\Exception\ConnectionException;
 
 class PendingClientRequest
 {
+    /*
+     * Declared so PHP 8.2+ does not raise a dynamic-property deprecation on
+     * every request (a hard error from PHP 9). Public, because undeclared
+     * properties always were — this changes nothing for existing callers.
+     */
+
+    /** @var string|null */
+    public $baseUri;
+
+    /** @var \Illuminate\Support\Collection */
+    public $beforeSendingCallbacks;
+
+    /** @var string|null */
+    public $bodyFormat;
+
+    /** @var mixed */
+    public $cookies;
+
+    /** @var array */
+    public $options;
+
+    /** @var \GuzzleHttp\TransferStats|null */
+    public $transferStats;
+
     public function __construct() {
 
         $this->beforeSendingCallbacks = collect(function ($request, $options) {
