@@ -2,7 +2,7 @@
 
 All notable changes to `appmanager` will be documented in this file
 
-## 3.5.0 (unreleased)
+## 3.5.0
 
 Support for Shopify's expiring offline access tokens (required for public apps
 from 1 January 2027). Fully backward compatible: an app that changes nothing
@@ -26,6 +26,10 @@ keeps the exact previous behaviour.
 - Declared the HTTP client's properties, removing PHP 8.2+ dynamic-property
   deprecations on every request (a hard error from PHP 9).
 - Still supports PHP 7.3 through 8.4.
+
+Nothing else is required: apps that do not set `shopify_token_resolver` keep the
+previous behaviour, with `shopify_timeout` (20s) the only change they will
+notice.
 
 ## 3.4.0
 
