@@ -85,6 +85,41 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Shopify access token resolver
+    |--------------------------------------------------------------------------
+    |
+    | Class implementing HulkApps\AppManager\Contracts\ShopifyTokenResolver
+    | that supplies a shop's Admin API token for billing calls.
+    |
+    | Leave null to read the token column configured above, exactly as before.
+    | That is correct for non-expiring offline tokens.
+    |
+    | Apps on Shopify's expiring offline tokens (60-minute tokens with a refresh
+    | token; required for public apps from 1 Jan 2027) must set this to a
+    | resolver backed by whatever renews their tokens. Charge calls then use a
+    | live token, and recover once from a rejected one.
+    |
+    | A class name rather than a closure, so `php artisan config:cache` works.
+    |
+    */
+
+    'shopify_token_resolver' => null,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Shopify request timeout (seconds)
+    |--------------------------------------------------------------------------
+    |
+    | Upper bound for each billing call to a shop's Admin API. Without one a
+    | stalled request waits indefinitely — on a serverless host that means the
+    | platform kills the request mid-way through a charge. 0 disables it.
+    |
+    */
+
+    'shopify_timeout' => 20,
+
+    /*
+    |--------------------------------------------------------------------------
     | Shopify API Version
     |--------------------------------------------------------------------------
     |

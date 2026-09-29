@@ -9,6 +9,22 @@ class ClientResponse
         __call as macroCall;
     }
 
+    /**
+     * Declared so PHP 8.2+ does not raise a dynamic-property deprecation on
+     * every response (a hard error from PHP 9). Public, because undeclared
+     * properties always were, and PendingClientRequest sets `cookies` and
+     * `transferStats` from outside.
+     */
+
+    /** @var \Psr\Http\Message\ResponseInterface */
+    public $response;
+
+    /** @var mixed */
+    public $cookies;
+
+    /** @var \GuzzleHttp\TransferStats|null */
+    public $transferStats;
+
     public function __construct($response) {
 
         $this->response = $response;

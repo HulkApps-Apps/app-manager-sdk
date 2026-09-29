@@ -3,15 +3,18 @@
 namespace HulkApps\AppManager\app\Http\Controllers;
 
 use HulkApps\AppManager\app\Events\PlanActivated;
-use HulkApps\AppManager\Client\Client;
+use HulkApps\AppManager\Client\ClientResponse;
 use HulkApps\AppManager\Exception\ChargeException;
 use HulkApps\AppManager\Exception\GraphQLException;
+use HulkApps\AppManager\Exception\MissingShopException;
 use HulkApps\AppManager\GraphQL\GraphQL;
+use HulkApps\AppManager\Shopify\ShopifyApi;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use function HulkApps\AppManager\app\deleteAppManagerCache;
 
 class ChargeController extends Controller
@@ -41,9 +44,7 @@ class ChargeController extends Controller
 
                 $storedCharge = \AppManager::getCharge($request->shop);
                 if ($storedCharge && !empty($storedCharge['active_charge'])) {
-                    $storeTokenField = config('app-manager.field_names.shopify_token', 'shopify_token');
-                    $charge = Client::withHeaders(["X-Shopify-Access-Token" => $shop->$storeTokenField])
-                        ->delete("https://{$shop->$storeNameField}/admin/api/$apiVersion/recurring_application_charges/{$storedCharge['active_charge']['charge_id']}.json");
+                    $this->cancelShopifyCharge($shop->$storeNameField, $storedCharge['active_charge']['charge_id']);
 
                     if (!empty($shop->$storePlanField)) {
                         \AppManager::cancelCharge($request->shop, $shop->$storePlanField);
@@ -274,7 +275,6 @@ class ChargeController extends Controller
     {
         $tableName = config('app-manager.shop_table_name', 'users');
         $storeName = config('app-manager.field_names.name', 'name');
-        $storeToken = config('app-manager.field_names.shopify_token');
         $storePlanField = config('app-manager.field_names.plan_id', 'plan_id');
         $storeGrandfathered = config('app-manager.field_names.grandfathered', 'grandfathered');
 
@@ -290,8 +290,11 @@ class ChargeController extends Controller
             return \redirect()->route('home',$responseData);
         }
 
-        $charge = Client::withHeaders(["X-Shopify-Access-Token" => $shop->$storeToken])
-            ->get("https://{$shop->$storeName}/admin/api/$apiVersion/recurring_application_charges/{$request->charge_id}.json")->json();
+        // The merchant is already being billed: a stale token here used to end
+        // in "Invalid charge" with the plan never recorded.
+        $charge = app(ShopifyApi::class)
+            ->rest($shop->$storeName, 'get', "recurring_application_charges/{$request->charge_id}.json")
+            ->json();
 
         $plan = \AppManager::getPlan($request->plan, $shop->id);
         $plan['old_plan'] = $request->old_plan ?? null;
@@ -364,10 +367,13 @@ class ChargeController extends Controller
 
         $apiVersion = config('app-manager.shopify_api_version');
 
+        if (! $shop) {
+            return response()->json(['message' => "Shop {$request->shop} not found"], 404);
+        }
+
+        // Called by the portal's queued job, with no merchant in the app.
         if ($request->get('charge_id')) {
-            $storeTokenField = config('app-manager.field_names.shopify_token', 'shopify_token');
-            $charge = Client::withHeaders(["X-Shopify-Access-Token" => $shop->$storeTokenField])
-                ->delete("https://{$shop->$storeNameField}/admin/api/$apiVersion/recurring_application_charges/{$request->get('charge_id')}.json");
+            $this->cancelShopifyCharge($shop->$storeNameField, $request->get('charge_id'));
         }
     }
 
@@ -435,5 +441,48 @@ class ChargeController extends Controller
             deleteAppManagerCache();
         }
         return response()->json(['status' => true,'plan_type' =>'cancel_plan']);
+    }
+
+    /**
+     * Never fails the caller. No token at all means the shop is almost certainly
+     * uninstalled, and Shopify cancels an app's charges itself on uninstall.
+     */
+    private function cancelShopifyCharge($shopDomain, $chargeId)
+    {
+        try {
+            $response = app(ShopifyApi::class)->rest(
+                $shopDomain,
+                'delete',
+                "recurring_application_charges/{$chargeId}.json"
+            );
+        } catch (MissingShopException $exception) {
+            Log::warning('App Manager: no Shopify token to cancel charge with; shop is likely uninstalled', [
+                'shop' => $shopDomain,
+                'charge_id' => $chargeId,
+            ]);
+
+            return;
+        }
+
+        $this->reportUnconfirmedCancellation($response, $shopDomain, $chargeId);
+    }
+
+    /**
+     * A refused cancellation leaves the merchant billed while the app believes
+     * the charge is gone, so it is reported. 404 means it is already gone.
+     */
+    private function reportUnconfirmedCancellation(ClientResponse $response, $shopDomain, $chargeId)
+    {
+        if ($response->isSuccess() || $response->status() === 404) {
+            return;
+        }
+
+        report(new ChargeException(sprintf(
+            'Shopify did not cancel recurring charge %s for %s: HTTP %s %s',
+            $chargeId,
+            $shopDomain,
+            $response->status(),
+            $response->body()
+        )));
     }
 }
