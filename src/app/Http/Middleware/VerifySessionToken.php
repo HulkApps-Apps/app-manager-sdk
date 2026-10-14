@@ -58,26 +58,24 @@ class VerifySessionToken
             return null;
         }
 
-        $secrets = $this->apiSecrets();
-        if (empty($secrets)) {
-            Log::warning('App Manager: no Shopify API secret is configured, so session tokens cannot be verified. Set SHOPIFY_API_SECRET or app-manager.shopify_api_secret.');
-            return null;
-        }
-
-        $signature = $this->base64UrlDecode($encodedSignature);
-        $signed = false;
-        foreach ($secrets as $secret) {
-            if (hash_equals(hash_hmac('sha256', "$encodedHeader.$encodedPayload", $secret, true), $signature)) {
-                $signed = true;
-                break;
-            }
-        }
-        if (!$signed) {
+        $secret = (string) config('app-manager.shopify_api_secret');
+        if ($secret === '') {
+            // Reported, not just logged, so the app's error tracker alerts: every billing-page request fails until this is set.
+            report(new \RuntimeException('App Manager: app-manager.shopify_api_secret is empty, so session tokens cannot be verified. Point it at the env variable holding your Shopify API secret.'));
             return null;
         }
 
         $payload = json_decode($this->base64UrlDecode($encodedPayload), true);
         if (!is_array($payload)) {
+            return null;
+        }
+
+        $apiKey = (string) config('app-manager.shopify_api_key');
+        $expected = hash_hmac('sha256', "$encodedHeader.$encodedPayload", $secret, true);
+        if (!hash_equals($expected, $this->base64UrlDecode($encodedSignature))) {
+            if ($apiKey !== '' && ($payload['aud'] ?? null) === $apiKey) {
+                Log::warning('App Manager: a session token for this app failed signature verification. Check that app-manager.shopify_api_secret holds this app\'s current Shopify API secret.');
+            }
             return null;
         }
 
@@ -89,8 +87,9 @@ class VerifySessionToken
             return null;
         }
 
-        $apiKeys = $this->apiKeys();
-        if (!empty($apiKeys) && !in_array($payload['aud'] ?? null, $apiKeys, true)) {
+        if ($apiKey !== '' && ($payload['aud'] ?? null) !== $apiKey) {
+            // Only a token signed with this app's secret gets here, so the configured key is wrong.
+            Log::warning('App Manager: a session token signed with this app\'s secret has a different API key. Check that app-manager.shopify_api_key holds this app\'s Shopify API key.');
             return null;
         }
 
@@ -101,32 +100,6 @@ class VerifySessionToken
         }
 
         return strtolower($shop);
-    }
-
-    private function apiSecrets(): array
-    {
-        return $this->configured([
-            config('app-manager.shopify_api_secret'),
-            config('shopify-app.api_secret'),
-            config('shopify.api_secret'),
-            config('shopify-app.api_secret_old'),
-        ]);
-    }
-
-    private function apiKeys(): array
-    {
-        return $this->configured([
-            config('app-manager.shopify_api_key'),
-            config('shopify-app.api_key'),
-            config('shopify.api_key'),
-        ]);
-    }
-
-    private function configured(array $values): array
-    {
-        return array_values(array_unique(array_filter($values, function ($value) {
-            return is_string($value) && $value !== '' && $value !== 'not_defined';
-        })));
     }
 
     private function base64UrlDecode(string $value): string

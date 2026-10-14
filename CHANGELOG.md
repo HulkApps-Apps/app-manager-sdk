@@ -20,15 +20,27 @@ overwrite the failsafe database.
 - `plan/process/callback` stays open: Shopify redirects the merchant there.
 - The `token` header is compared in constant time, and is always rejected when
   `APP_MANAGER_SECRET` is empty.
-- New config: `shopify_api_key` and `shopify_api_secret`, which fall back to
-  `shopify-app.*` and `shopify.*`. When no Shopify API secret is found at all,
-  every billing-page call returns 401 and a warning is logged.
+- New config: `shopify_api_key` and `shopify_api_secret`, read from
+  `SHOPIFY_API_KEY` / `SHOPIFY_API_SECRET` by default. Session tokens are
+  verified with these two values only, and every misconfiguration names the
+  setting to fix: an empty secret is reported through the app's exception
+  handler (so error trackers alert), and a wrong secret or a wrong API key
+  logs a warning.
 
 Upgrade steps:
 
-1. Make sure the app's Shopify API key and secret are configured
-   (`SHOPIFY_API_KEY` / `SHOPIFY_API_SECRET`, `config/shopify-app.php` or
-   `config/shopify.php`), and `APP_MANAGER_SECRET` is set.
+1. **Required:** add both keys to the app's `config/app-manager.php`, pointing
+   at the env variables that hold its Shopify API key and secret, and make sure
+   `APP_MANAGER_SECRET` is set:
+
+   ```php
+   'shopify_api_key' => env('SHOPIFY_API_KEY', ''),       // or the app's own name, e.g. SHOPIFY_PUBLIC_KEY
+   'shopify_api_secret' => env('SHOPIFY_API_SECRET', ''), // or the app's own name, e.g. SHOPIFY_PRIVATE_KEY
+   ```
+
+   Nothing throws if they are missing or wrong: every billing-page request
+   returns 401, and an `App Manager:` error (missing secret) or warning (wrong
+   secret or key) names the setting to fix.
 2. Upgrade `app-manager-web-components` to the release that sends the session
    token. Apps that call these routes from their own frontend (for example
    `app-manager-vue`) must send the session token in the `Authorization` header.
