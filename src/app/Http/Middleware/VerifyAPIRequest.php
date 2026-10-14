@@ -18,7 +18,8 @@ class VerifyAPIRequest
     {
         if($request->header('token')) {
 
-            if(config('app-manager.secret') === $request->header('token')) {
+            $secret = (string) config('app-manager.secret');
+            if($secret !== '' && hash_equals($secret, (string) $request->header('token'))) {
                 return $next($request);
             }
 

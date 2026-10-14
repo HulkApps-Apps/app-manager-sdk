@@ -2,6 +2,49 @@
 
 All notable changes to `appmanager` will be documented in this file
 
+## 3.6.0
+
+Security: the `/api/app-manager/*` routes now require authentication.
+Previously every route except `users` and `store-charge` was open, so anyone who
+knew a shop's domain could change its plan, cancel its Shopify charge or
+overwrite the failsafe database.
+
+- App Manager–only routes (`burst-cache`, `fail-safe-backup`,
+  `fail-safe-backup-full`, `cancel-charge`, `plan/activate-global`,
+  `plan/cancel-global`) now require the `token` header, like `users` and
+  `store-charge`. App Manager already sends it, so nothing changes for it.
+- Routes the billing page calls (`plans`, `plan-features`, `marketing-banners`,
+  `plan/process/{plan_id}`, `active-without-plan`) now require a Shopify session
+  token (`Authorization: Bearer …`), or the `token` header. The shop is taken
+  from the session token and overrides any `shop` / `shop_domain` in the request.
+- `plan/process/callback` stays open: Shopify redirects the merchant there.
+- The `token` header is compared in constant time, and is always rejected when
+  `APP_MANAGER_SECRET` is empty.
+- New config: `shopify_api_key` and `shopify_api_secret`, read from
+  `SHOPIFY_API_KEY` / `SHOPIFY_API_SECRET` by default. Session tokens are
+  verified with these two values only, and every misconfiguration names the
+  setting to fix: an empty secret is reported through the app's exception
+  handler (so error trackers alert), and a wrong secret or a wrong API key
+  logs a warning.
+
+Upgrade steps:
+
+1. **Required:** add both keys to the app's `config/app-manager.php`, pointing
+   at the env variables that hold its Shopify API key and secret, and make sure
+   `APP_MANAGER_SECRET` is set:
+
+   ```php
+   'shopify_api_key' => env('SHOPIFY_API_KEY', ''),       // or the app's own name, e.g. SHOPIFY_PUBLIC_KEY
+   'shopify_api_secret' => env('SHOPIFY_API_SECRET', ''), // or the app's own name, e.g. SHOPIFY_PRIVATE_KEY
+   ```
+
+   Nothing throws if they are missing or wrong: every billing-page request
+   returns 401, and an `App Manager:` error (missing secret) or warning (wrong
+   secret or key) names the setting to fix.
+2. Upgrade `app-manager-web-components` to the release that sends the session
+   token. Apps that call these routes from their own frontend (for example
+   `app-manager-vue`) must send the session token in the `Authorization` header.
+
 ## 3.5.0
 
 Support for Shopify's expiring offline access tokens (required for public apps

@@ -40,6 +40,15 @@ In the case that config/app-manager.php is already present, delete it and then r
 
 Don't forget to update secret on file `config/app-manager.php`
 
+**Required: `shopify_api_key` and `shopify_api_secret`.** The routes the billing page calls verify Shopify session tokens with these two values. Add both to `config/app-manager.php`, pointing at the env variables that hold your app's Shopify API key and secret:
+
+```php
+'shopify_api_key' => env('SHOPIFY_API_KEY', ''),
+'shopify_api_secret' => env('SHOPIFY_API_SECRET', ''),
+```
+
+Use your app's own env names if they differ, for example `env('SHOPIFY_PUBLIC_KEY', '')` and `env('SHOPIFY_PRIVATE_KEY', '')`. Nothing throws if they are missing or wrong: every billing-page request returns 401 and the page shows no plans. A missing secret is reported to your error tracker, and a wrong secret or key logs a warning; each message starts with `App Manager:` and names the setting to fix.
+
 #### 2.Initialize App Features
 According to the example in the file, list all features of the app in `config/plan-features.php`.
 

@@ -210,6 +210,7 @@ class PlanController extends Controller
         $tableName = config('app-manager.shop_table_name', 'users');
         $shopify_fields = config('app-manager.field_names');
         $shop_domain = $request->get('shop_domain');
+        // TODO: accept only a no-charge (free / choose-later) plan; any plan_id, paid ones included, is applied as-is.
         $plan_id = $request->get('plan_id');
         if (!$shop_domain) {
             return response()->json(['message' => 'shop domain is required'], 422);
@@ -278,6 +279,7 @@ class PlanController extends Controller
 
         switch ($syncType) {
             case 'plans':
+                // TODO: App Manager's plan payload carries old_plan_id, which the failsafe plans table lacks, so this upsert fails.
                 if (isset($payload['features'])) {
                     $payload['feature_plan'] = $payload['features'];
                     unset($payload['features']);
@@ -465,6 +467,7 @@ class PlanController extends Controller
         }
         $this->batchInsert('app_filters', $appFilters);
 
+        // TODO: App Manager omits app_faqs until it has recorded this app's SDK version, and this then throws.
         $appFaqs = $this->filterDataForFullFailsafeBackup($data['app_faqs'], $commanFields);
         $this->batchInsert('app_faqs', $appFaqs);
     }

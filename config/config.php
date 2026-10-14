@@ -192,4 +192,21 @@ return [
     */
     'most_popular_plan_ids' => [],
 
+    /*
+    |-------------------------------------------
+    | Route authentication [REQUIRED]
+    |-------------------------------------------
+    |
+    | The routes the embedded billing page calls (plans, plan-features,
+    | marketing-banners, plan/process, active-without-plan) require a Shopify
+    | session token in the Authorization header, verified with this app's
+    | Shopify API key and secret. Set both, using your app's own env variable
+    | names if they differ. A missing or wrong secret makes every billing-page
+    | request return 401.
+    |
+    |-------------------------------------------
+    */
+    'shopify_api_key' => env('SHOPIFY_API_KEY', ''),
+    'shopify_api_secret' => env('SHOPIFY_API_SECRET', ''),
+
 ];

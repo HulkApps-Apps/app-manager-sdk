@@ -7,23 +7,25 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('api/app-manager')->as('app-manager.')->group(function () {
 
-    Route::get('marketing-banners', BannerController::class.'@index');
-
-    Route::get('plan-features', PlanController::class.'@index');
-    Route::get('plans', PlanController::class.'@plans');
-    Route::post('active-without-plan', PlanController::class.'@activeWithoutPlan');
-    Route::post('burst-cache', PlanController::class.'@burstCache');
-    Route::post('fail-safe-backup', PlanController::class.'@failSafeBackup');
-    Route::post('fail-safe-backup-full', PlanController::class.'@rebuildFailsafe');
-
+    // Shopify redirects the merchant here after approving a charge, so no token can be attached.
     Route::get('plan/process/callback', ChargeController::class.'@callback')->name('plan.callback');
-    Route::get('plan/process/{plan_id}', ChargeController::class.'@process');
-    Route::post('cancel-charge', ChargeController::class.'@cancelCharge');
-    Route::post('plan/activate-global', ChargeController::class.'@activateGlobalPlan');
-    Route::post('plan/cancel-global', ChargeController::class.'@cancelGlobalPlan');
+
+    Route::middleware('app-manager-session')->group(function () {
+        Route::get('marketing-banners', BannerController::class.'@index');
+        Route::get('plan-features', PlanController::class.'@index');
+        Route::get('plans', PlanController::class.'@plans');
+        Route::post('active-without-plan', PlanController::class.'@activeWithoutPlan');
+        Route::get('plan/process/{plan_id}', ChargeController::class.'@process');
+    });
 
     Route::middleware('app-manager-api')->group(function (){
         Route::get('users', PlanController::class.'@users');
         Route::post('store-charge', ChargeController::class.'@storeCharge');
+        Route::post('burst-cache', PlanController::class.'@burstCache');
+        Route::post('fail-safe-backup', PlanController::class.'@failSafeBackup');
+        Route::post('fail-safe-backup-full', PlanController::class.'@rebuildFailsafe');
+        Route::post('cancel-charge', ChargeController::class.'@cancelCharge');
+        Route::post('plan/activate-global', ChargeController::class.'@activateGlobalPlan');
+        Route::post('plan/cancel-global', ChargeController::class.'@cancelGlobalPlan');
     });
 });
