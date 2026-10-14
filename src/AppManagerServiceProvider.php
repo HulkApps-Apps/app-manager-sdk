@@ -4,6 +4,7 @@ namespace HulkApps\AppManager;
 
 use HulkApps\AppManager\app\Http\Middleware\HasPlan;
 use HulkApps\AppManager\app\Http\Middleware\VerifyAPIRequest;
+use HulkApps\AppManager\app\Http\Middleware\VerifySessionToken;
 use HulkApps\AppManager\Console\InitDB;
 use HulkApps\AppManager\Contracts\ShopifyTokenResolver;
 use HulkApps\AppManager\Shopify\ColumnTokenResolver;
@@ -26,6 +27,7 @@ class AppManagerServiceProvider extends ServiceProvider
         $router = $this->app->make(Router::class);
 
         $router->aliasMiddleware('app-manager-api', VerifyAPIRequest::class);
+        $router->aliasMiddleware('app-manager-session', VerifySessionToken::class);
         $router->aliasMiddleware('app-manager:has-plan', HasPlan::class);
 
         if ($this->app->runningInConsole()) {

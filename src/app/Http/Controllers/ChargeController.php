@@ -299,6 +299,8 @@ class ChargeController extends Controller
         $plan = \AppManager::getPlan($request->plan, $shop->id);
         $plan['old_plan'] = $request->old_plan ?? null;
 
+        // TODO: require the charge status to be active, and take plan/discount/old_plan from Shopify's
+        // stored return_url instead of the query string, which anyone can change.
         if (!empty($charge['recurring_application_charge'])) {
 
             $charge = $charge['recurring_application_charge'];
