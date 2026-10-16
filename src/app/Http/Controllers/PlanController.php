@@ -62,27 +62,12 @@ class PlanController extends Controller
                 $activeCharge = \AppManager::getCharge($shopDomain);
                 if(empty($plan) && !empty($activeCharge['bundle_charge']))
                     $plan = \AppManager::getBundlePlan($activePlanId);
-                if (empty($activeCharge['cancelled_charge']) && empty($activeCharge['active_charge']) && !$trialActivatedAt && !$plan) {
+                if ($this->chooseLaterOffered($plan, $activeCharge, $trialActivatedAt)) {
                     $choose_later = true;
                 }
             }
 
-            $defaultPlanId = null;
-            $defaultPlansData = collect($plans)->where('choose_later_plan', true);
-            if ($defaultPlansData) {
-                if ($defaultPlansData->where('store_base_plan', true)->count()) {
-                    $shopify_plans = collect($plans)->where('interval', 'EVERY_30_DAYS');
-                    foreach ($shopify_plans as $index => $s) {
-                        if (in_array($shopify_plan, $s['shopify_plans'])) {
-                            $defaultPlanId = $s['id'];
-                            break;
-                        }
-                    }
-                }
-                else {
-                    $defaultPlanId = $defaultPlansData->pluck('id')->first();
-                }
-            }
+            $defaultPlanId = $this->chooseLaterPlanId($plans, $shopify_plan);
 
             $promotionalDiscount=[];
             if($request->has('discount_code')){
@@ -148,6 +133,33 @@ class PlanController extends Controller
         return response()->json($response);
     }
 
+    private function chooseLaterOffered($plan, $charge, $trialActivatedAt)
+    {
+        return empty($charge['cancelled_charge']) && empty($charge['active_charge']) && !$trialActivatedAt && !$plan;
+    }
+
+    private function chooseLaterPlanId($plans, $shopify_plan)
+    {
+        $defaultPlanId = null;
+        $defaultPlansData = collect($plans)->where('choose_later_plan', true);
+        if ($defaultPlansData) {
+            if ($defaultPlansData->where('store_base_plan', true)->count()) {
+                $shopify_plans = collect($plans)->where('interval', 'EVERY_30_DAYS');
+                foreach ($shopify_plans as $index => $s) {
+                    if (in_array($shopify_plan, $s['shopify_plans'])) {
+                        $defaultPlanId = $s['id'];
+                        break;
+                    }
+                }
+            }
+            else {
+                $defaultPlanId = $defaultPlansData->pluck('id')->first();
+            }
+        }
+
+        return $defaultPlanId;
+    }
+
     private function withActiveChargePricing($plan, array $pricing)
     {
         if (empty($plan) || !is_array($plan)) {
@@ -210,7 +222,6 @@ class PlanController extends Controller
         $tableName = config('app-manager.shop_table_name', 'users');
         $shopify_fields = config('app-manager.field_names');
         $shop_domain = $request->get('shop_domain');
-        // TODO: accept only a no-charge (free / choose-later) plan; any plan_id, paid ones included, is applied as-is.
         $plan_id = $request->get('plan_id');
         if (!$shop_domain) {
             return response()->json(['message' => 'shop domain is required'], 422);
@@ -218,8 +229,31 @@ class PlanController extends Controller
 
         $planIdField = $shopify_fields['plan_id'] ?? 'plan_id';
         $trialActivatedAtField = $shopify_fields['trial_activated_at'] ?? 'trial_activated_at';
-        $existingTrialActivatedAt = DB::table($tableName)->where($shopify_fields['name'], $shop_domain)
-            ->value($trialActivatedAtField);
+        $shopifyPlanField = $shopify_fields['shopify_plan'] ?? 'shopify_plan';
+        $shop = DB::table($tableName)->where($shopify_fields['name'], $shop_domain)->first();
+        if (empty($shop)) {
+            return response()->json(['status' => false], 422);
+        }
+        $existingTrialActivatedAt = $shop->$trialActivatedAtField ?? null;
+
+        // Same rule as the choose-later link in plans().
+        $shopifyPlan = $shop->$shopifyPlanField ?? null;
+        $activePlanId = $shop->$planIdField ?? null;
+        $plans = \AppManager::getPlans($shop_domain, $activePlanId, $shopifyPlan);
+        $currentPlan = collect($plans)->where('id', $activePlanId)->first();
+        $charge = \AppManager::getCharge($shop_domain);
+        if (empty($currentPlan) && !empty($charge['bundle_charge'])) {
+            $currentPlan = \AppManager::getBundlePlan($activePlanId);
+        }
+        $chooseLaterPlanId = $this->chooseLaterPlanId($plans, $shopifyPlan);
+        $plan = collect($plans)->first(function ($plan) use ($chooseLaterPlanId) {
+            return is_array($plan) && isset($plan['id']) && (string) $plan['id'] === (string) $chooseLaterPlanId;
+        });
+        $chargeKnown = is_array($charge) && array_key_exists('active_charge', $charge);
+        if (empty($plan) || !is_scalar($plan_id) || (string) $chooseLaterPlanId !== (string) $plan_id || !$chargeKnown
+            || !$this->chooseLaterOffered($currentPlan, $charge, $existingTrialActivatedAt)) {
+            return response()->json(['status' => false, 'message' => 'Choose later is not available for this shop'], 422);
+        }
 
         $updateInfo = [
             $planIdField => $plan_id,

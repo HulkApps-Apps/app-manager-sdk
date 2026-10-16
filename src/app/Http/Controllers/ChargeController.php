@@ -278,7 +278,14 @@ class ChargeController extends Controller
         $storePlanField = config('app-manager.field_names.plan_id', 'plan_id');
         $storeGrandfathered = config('app-manager.field_names.grandfathered', 'grandfathered');
 
+        if (empty($request->shop)) {
+            throw new ChargeException("Shop Required");
+        }
+
         $shop = DB::table($tableName)->where($storeName, $request->shop)->first();
+        if (empty($shop)) {
+            throw new ChargeException("Invalid charge");
+        }
         $apiVersion = config('app-manager.shopify_api_version');
         $responseData = ['shop' => $shop->$storeName];
         //add host
@@ -289,6 +296,9 @@ class ChargeController extends Controller
         if(!$request->charge_id){
             return \redirect()->route('home',$responseData);
         }
+        if (!ctype_digit((string) $request->charge_id)) {
+            throw new ChargeException("Invalid charge");
+        }
 
         // The merchant is already being billed: a stale token here used to end
         // in "Invalid charge" with the plan never recorded.
@@ -296,21 +306,34 @@ class ChargeController extends Controller
             ->rest($shop->$storeName, 'get', "recurring_application_charges/{$request->charge_id}.json")
             ->json();
 
-        $plan = \AppManager::getPlan($request->plan, $shop->id);
-        $plan['old_plan'] = $request->old_plan ?? null;
-
-        // TODO: require the charge status to be active, and take plan/discount/old_plan from Shopify's
-        // stored return_url instead of the query string, which anyone can change.
         if (!empty($charge['recurring_application_charge'])) {
 
             $charge = $charge['recurring_application_charge'];
+
+            if (strtolower($charge['status'] ?? '') !== 'active') {
+                return \redirect()->route('home', $responseData);
+            }
+
+            // Read the plan from Shopify's stored return_url: the query string can be edited.
+            parse_str((string) parse_url($charge['return_url'] ?? '', PHP_URL_QUERY), $bound);
+            if (empty($bound['plan']) || ($bound['shop'] ?? null) !== $shop->$storeName) {
+                throw new ChargeException("Invalid charge");
+            }
+            $planId = $bound['plan'];
+            $discountId = $bound['discount'] ?? null;
+
+            // TODO: an empty plan or failed storeCharge() leaves a paying merchant without the plan; report and retry.
+            // TODO: pass the shop domain, not $shop->id, so custom discounts apply.
+            $plan = \AppManager::getPlan($planId, $shop->id);
+            $plan['old_plan'] = $bound['old_plan'] ?? null;
+
             $charge['charge_id']  = $charge['id'];
             $charge['type'] = 'recurring';
-            $charge['plan_id'] = $request->plan;
+            $charge['plan_id'] = $planId;
             $charge['shop_domain'] = $request->shop;
             $charge['interval'] = $plan['interval']['value'];
 
-            $snapshotKey = $this->chargeSnapshotCacheKey($request->shop, $request->timestamp);
+            $snapshotKey = $this->chargeSnapshotCacheKey($request->shop, $bound['timestamp'] ?? null);
             $discountSnapshot = Cache::get($snapshotKey);
             if (is_array($discountSnapshot)) {
                 foreach ($discountSnapshot as $field => $value) {
@@ -330,7 +353,7 @@ class ChargeController extends Controller
 
             if ($data['message'] === "success") {
                 deleteAppManagerCache();
-                $userUpdateInfo = [$storePlanField => $request->plan, $storeGrandfathered => 0];
+                $userUpdateInfo = [$storePlanField => $planId, $storeGrandfathered => 0];
                 $shopify_fields = config('app-manager.field_names');
                 if(isset($shopify_fields['total_trial_days'])){
                     $userUpdateInfo[$shopify_fields['total_trial_days']] = $plan['trial_days']?? 0;
@@ -339,14 +362,14 @@ class ChargeController extends Controller
                 $chargeData = \AppManager::getCharge($shop->$storeName);
 
                 $discountedPlans = [];
-                if(!empty($request->discount))
-                    $discountedPlans = \AppManager::getRelatedDiscountedPlans($request->discount);
+                if(!empty($discountId))
+                    $discountedPlans = \AppManager::getRelatedDiscountedPlans($discountId);
 
                 try {
                     event(new PlanActivated($plan, $charge, $chargeData['cancelled_charge'] ?? null));
-                    if (!empty($request->discount) &&  !$plan['is_global']) {
-                        if (empty($discountedPlans) || in_array($request->plan, $discountedPlans)) {
-                            $discountApplied = \AppManager::discountUsed($shop->$storeName, $request->discount);
+                    if (!empty($discountId) &&  !$plan['is_global']) {
+                        if (empty($discountedPlans) || in_array($planId, $discountedPlans)) {
+                            $discountApplied = \AppManager::discountUsed($shop->$storeName, $discountId);
                         }
                     }
 
