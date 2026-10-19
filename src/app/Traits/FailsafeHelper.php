@@ -436,7 +436,7 @@ trait FailsafeHelper {
 
     public function cancelChargeHelper($shop_domain, $plan_id) {
         $charge = DB::connection('app-manager-failsafe')->table('charges')
-            ->where('shop_domain', $shop_domain)->where('plan_id', $plan_id)
+            ->where('shop_domain', $shop_domain)->where('plan_id', $plan_id)->whereIn('status', ['active', 'ACTIVE'])
             ->update([
                 'status' => 'cancelled',
                 'cancelled_on' => Carbon::now(),
