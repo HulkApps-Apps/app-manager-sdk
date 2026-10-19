@@ -2,6 +2,29 @@
 
 All notable changes to `appmanager` will be documented in this file
 
+## 3.6.1
+
+Security: a merchant can no longer give their own shop a paid plan without
+paying. 3.6.0 closed anonymous and cross-shop access; these two routes could
+still be abused by a logged-in merchant on their own shop.
+
+- `active-without-plan` ("choose later") follows the same rule as the billing
+  page's choose-later link: it works only during onboarding (no plan, no active
+  or cancelled charge, no trial started yet), and only for the shop's
+  choose-later plan (`default_plan_id`). Anything else returns 422, so it can no
+  longer be used to switch an existing shop to another plan without paying.
+- `plan/process/callback` changes the plan only when Shopify reports the charge
+  as `active`. A declined, expired or still-pending charge no longer switches
+  the plan. The plan, discount, old plan and timestamp are now read from the
+  `return_url` Shopify stored on the charge, not from the query string, so the
+  callback can no longer be replayed with a different plan.
+- Malformed input is refused before anything runs: an unknown or non-text
+  `shop` or a non-numeric `charge_id` on the callback, and a missing or
+  non-scalar `plan_id` / `shop_domain` on `active-without-plan`.
+
+No configuration or frontend changes are needed: update the package and clear
+caches.
+
 ## 3.6.0
 
 Security: the `/api/app-manager/*` routes now require authentication.

@@ -46,6 +46,7 @@ trait HasPlan
         });
     }
 
+    // TODO: checks plan_id only, not trial or charge; features stay after an unpaid trial. Apps should also check hasPlan().
     public function planFeatures() {
         $shopify_fields = config('app-manager.field_names');
         $planId = $this->{$shopify_fields['plan_id']};
