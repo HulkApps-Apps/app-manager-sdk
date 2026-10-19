@@ -339,6 +339,7 @@ class PlanController extends Controller
                 DB::connection('app-manager-failsafe')
                     ->table('charges')
                     ->where('shop_domain', $payload['shop_domain'])
+                    ->whereIn('status', ['active', 'ACTIVE'])
                     ->update([
                         'status' => 'cancelled',
                         'cancelled_on' => $this->formatDate($payload['cancelled_on'] ?? now()->toDateTimeString()),
