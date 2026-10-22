@@ -2,6 +2,38 @@
 
 All notable changes to `appmanager` will be documented in this file
 
+## 3.7.0
+
+Promotional-discount targeting + automatic discounts.
+
+Automatic discounts — a discount flagged `is_automatic` in App Manager applies
+to eligible shops with no code needed. App Manager resolves the winning discount
+(the automatic one and, when a code is supplied, the coded one — by `priority`,
+automatic breaking a tie) and injects it per-plan into the `/plans` response, so
+the billing page needs no extra round trip and nothing to opt in on the frontend.
+
+Targeting (audience, per-plan rates, upgrades-only) is enforced by App Manager so
+the billing-page display and the actual charge share one verdict:
+
+- `getPlans()` forwards the discount code and the shop's install date
+  (`shop_installed_at`, for the fresh-install window) so `/plans` can resolve and
+  inject the winning per-plan discount.
+- `ChargeController::process()` resolves the same winner by priority and applies
+  the per-plan value / type / cycles for the chosen plan, honouring "upgrades
+  only" (discount only when the new plan costs more than the merchant's current).
+- `getAutomaticDiscount()` + the `/automatic-discount` endpoint expose the best
+  eligible automatic discount for the charge path.
+
+Automatic + targeting is live-path only: App Manager withholds these discounts
+from the fail-safe backup, so during an App Manager outage they are neither shown
+nor charged (consistent). Plain coded discounts still fail-safe as before, and
+there is no fail-safe schema change in this release.
+
+App Manager only begins sending the `audience` column to an app's fail-safe
+backup once the app reports backend SDK **>= 3.7.0**, so tag this release 3.7.0.
+Until then App Manager withholds audience-gated discounts from the fail-safe
+backup entirely (they are still enforced on the live path).
+
 ## 3.6.1
 
 Security: a merchant can no longer give their own shop a paid plan without

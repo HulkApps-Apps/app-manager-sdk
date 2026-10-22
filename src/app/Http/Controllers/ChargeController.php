@@ -126,30 +126,59 @@ class ChargeController extends Controller
                 }
             }
 
-            $promotionalDiscount=[];
-            if($request->has('discount_code')){
-                $discountCode = $request->get('discount_code');
-                if (!empty($discountCode)) {
-                    $promotionalDiscount = \AppManager::getPromotionalDiscount($discountCode, $request->shop);
+            $createdAtField = config('app-manager.field_names.created_at', 'created_at');
+            $shopInstalledAt = $shop->$createdAtField ?? null;
+
+            // Resolve the winning discount the same way the billing page does:
+            // the automatic discount and (if supplied) the coded one, by
+            // priority — highest wins, automatic breaks a tie.
+            $candidates = [];
+            $automatic = \AppManager::getAutomaticDiscount($request->shop, $shopInstalledAt);
+            if (!empty($automatic)) {
+                $candidates[] = $automatic;
+            }
+            if ($request->filled('discount_code')) {
+                $coded = \AppManager::getPromotionalDiscount($request->get('discount_code'), $request->shop, $shopInstalledAt);
+                if (!empty($coded)) {
+                    $candidates[] = $coded;
                 }
+            }
+            usort($candidates, fn ($a, $b) =>
+                [$b['priority'] ?? 0, !empty($b['is_automatic']) ? 1 : 0] <=> [$a['priority'] ?? 0, !empty($a['is_automatic']) ? 1 : 0]
+            );
+            $promotionalDiscount = $candidates[0] ?? [];
+
+            // Per-plan override for the chosen plan (falls back to the campaign value/type/cycles).
+            $override = $promotionalDiscount['plan_overrides'][$plan['id']] ?? [];
+            $promoValue = $override['value'] ?? ($promotionalDiscount['value'] ?? null);
+            $promoType = $override['type'] ?? ($promotionalDiscount['type'] ?? 'percentage');
+            $promoCycles = $override['duration_intervals'] ?? ($promotionalDiscount['duration_intervals'] ?? null);
+
+            // "Upgrades only": apply only on plans priced above the merchant's
+            // current plan, so the charge stays in step with the billing page.
+            $currentPlanPrice = 0;
+            if (!empty($promotionalDiscount['upgrades_only'])) {
+                $currentCharge = \AppManager::getCharge($request->shop);
+                $currentPlanPrice = (float) ($currentCharge['active_charge']['price'] ?? 0);
             }
 
             $promoApplies = !empty($promotionalDiscount)
-                && (float) ($promotionalDiscount['value'] ?? 0) > 0
+                && (float) ($promoValue ?? 0) > 0
                 && empty($plan['is_global'])
-                && (empty($promotionalDiscount['plan_relation']) || in_array($plan['id'], $promotionalDiscount['plan_relation']));
+                && (empty($promotionalDiscount['plan_relation']) || in_array($plan['id'], $promotionalDiscount['plan_relation']))
+                && (empty($promotionalDiscount['upgrades_only']) || (float) $plan['price'] > $currentPlanPrice);
 
             $discount = [];
             if ($promoApplies) {
-                $discount_type = $promotionalDiscount['type'] ?? "percentage";
+                $discount_type = $promoType;
 
                 $discount = [
                     'value' => [
-                        $discount_type => $discount_type === "percentage" ? (float)$promotionalDiscount['value'] / 100 : ($promotionalDiscount['value'] <= $plan['price'] ? $promotionalDiscount['value'] : $plan['price']),
+                        $discount_type => $discount_type === "percentage" ? (float)$promoValue / 100 : ($promoValue <= $plan['price'] ? $promoValue : $plan['price']),
                     ],
                 ];
-                if((int)$promotionalDiscount['duration_intervals']){
-                    $discount['durationLimitInIntervals'] = (int)$promotionalDiscount['duration_intervals'];
+                if((int)$promoCycles){
+                    $discount['durationLimitInIntervals'] = (int)$promoCycles;
                 }
             } elseif ($plan['discount']) {
                 $discount_type = $plan['discount_type'] ?? "percentage";
@@ -170,9 +199,9 @@ class ChargeController extends Controller
             if (!empty($discount)) {
                 if ($promoApplies) {
                     $discountSnapshot = [
-                        'discount_value' => (float) $promotionalDiscount['value'],
-                        'discount_type' => $promotionalDiscount['type'] ?? 'percentage',
-                        'discount_duration_intervals' => (int) ($promotionalDiscount['duration_intervals'] ?? 0),
+                        'discount_value' => (float) $promoValue,
+                        'discount_type' => $promoType,
+                        'discount_duration_intervals' => (int) ($promoCycles ?? 0),
                         'discount_source' => 'promotional',
                         'promotional_discount_id' => (int) ($promotionalDiscount['id'] ?? 0),
                     ];

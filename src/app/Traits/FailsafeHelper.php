@@ -146,7 +146,7 @@ trait FailsafeHelper {
     }
 
     public function prepareDiscount($data) {
-        $code =  hex2bin($data['code']);
+        $code = hex2bin($data['code']);
         $shopDomain = $data['shop_domain'];
         $now = now();
 
@@ -161,66 +161,70 @@ trait FailsafeHelper {
             ->where('code', $code)
             ->first();
 
-        if (empty($discountData)) {
+        if (empty($discountData) || !$this->failsafeDiscountPasses($discountData, $shopDomain)) {
             return [];
         }
 
-        $discountShop = DB::connection('app-manager-failsafe')->table('discount_shops')
-            ->where('discount_id', $discountData->id)
-            ->count();
+        return $this->buildFailsafeDiscount($discountData);
+    }
 
-        $discountPlan = DB::connection('app-manager-failsafe')->table('discount_plans')
-            ->where('discount_id', $discountData->id)
-            ->get()->pluck('plan_id')->toArray();
 
-        $discountUsage = DB::connection('app-manager-failsafe')->table('discounts_usage_log')
-            ->where('discount_id', $discountData->id)
-            ->count();
+    // Shared eligibility: shops + usage limits. (Audience / per-plan / upgrade
+    // targeting is live-path only and never reaches the fail-safe.)
+    private function failsafeDiscountPasses($discountData, $shopDomain): bool {
+        $conn = DB::connection('app-manager-failsafe');
 
-        $discountUsageByDomain = DB::connection('app-manager-failsafe')->table('discounts_usage_log')
-            ->where('discount_id', $discountData->id)
-            ->where('domain', $shopDomain)
-            ->count();
-
+        $discountShop = $conn->table('discount_shops')
+            ->where('discount_id', $discountData->id)->count();
         if ($discountShop > 0) {
-            $discountShopSpecific = DB::connection('app-manager-failsafe')->table('discount_shops')
+            $specific = $conn->table('discount_shops')
                 ->where('discount_id', $discountData->id)
                 ->where('domain', $shopDomain)
                 ->first();
-            if(empty($discountShopSpecific)){
-                return [];
+            if (empty($specific)) {
+                return false;
             }
         }
 
-        if ($discountData->max_usage !== null
-            && $discountData->max_usage !== 0
-        ) {
-            if ($discountUsage >= $discountData->max_usage) {
-                return [];
+        if ($discountData->max_usage !== null && $discountData->max_usage !== 0) {
+            $usage = $conn->table('discounts_usage_log')
+                ->where('discount_id', $discountData->id)->count();
+            if ($usage >= $discountData->max_usage) {
+                return false;
             }
         }
 
-        if (
-            $discountData->multiple_uses === 0
-            && !empty($discountUsageByDomain)
-        ) {
-            return [];
+        if ($discountData->multiple_uses === 0) {
+            $usageByDomain = $conn->table('discounts_usage_log')
+                ->where('discount_id', $discountData->id)
+                ->where('domain', $shopDomain)
+                ->count();
+            if (!empty($usageByDomain)) {
+                return false;
+            }
         }
 
-        if ($discountData->multiple_apps === 0)
-        {
-            $discountUsageByApp = DB::connection('app-manager-failsafe')->table('discounts_usage_log')
+        if ($discountData->multiple_apps === 0) {
+            $usageByApp = $conn->table('discounts_usage_log')
                 ->where('discount_id', $discountData->id)
                 ->where('domain', $shopDomain)
                 ->where('app_id', '!=', $discountData->app_id)
                 ->first();
-            if ($discountUsageByApp) {
-                return [];
+            if ($usageByApp) {
+                return false;
             }
         }
 
+        return true;
+    }
+
+    private function buildFailsafeDiscount($discountData): array {
+        $planRelation = DB::connection('app-manager-failsafe')->table('discount_plans')
+            ->where('discount_id', $discountData->id)
+            ->get()->pluck('plan_id')->toArray();
+
         $discountData = json_decode(json_encode($discountData), true);
-        $discountData['plan_relation'] = $discountPlan;
+        $discountData['plan_relation'] = $planRelation;
         return $this->unSerializeData($discountData);
     }
 
