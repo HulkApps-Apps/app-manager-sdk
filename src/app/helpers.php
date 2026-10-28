@@ -6,13 +6,14 @@ namespace HulkApps\AppManager\app;
 use Illuminate\Support\Facades\Cache;
 
 if (! function_exists('appManagerCacheData')) {
-    function appManagerCacheData($key, $callback)
+    function appManagerCacheData($key, $callback, $ttl = null)
     {
         $cacheDriver = config('app-manager.cache_driver');
+        $store = ($cacheDriver === 'file') ? Cache::store() : Cache::tags('app-manager');
 
-        return ($cacheDriver === 'file')
-            ? Cache::rememberForever($key, $callback)
-            : Cache::tags('app-manager')->rememberForever($key, $callback);
+        return $ttl === null
+            ? $store->rememberForever($key, $callback)
+            : $store->remember($key, $ttl, $callback);
     }
 }
 

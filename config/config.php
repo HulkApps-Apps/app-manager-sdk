@@ -182,6 +182,20 @@ return [
 
     /*
     |-------------------------------------------
+    | Shop plans cache lifetime
+    |-------------------------------------------
+    |
+    | Seconds a shop's billing-page plans (with its live discount) stay
+    | cached. Bounds how long the page can lag a discount that starts, ends
+    | or runs out when a cache burst does not reach the app.
+    |
+    |-------------------------------------------
+    */
+
+    'plans_cache_ttl' => env('APP_MANAGER_PLANS_CACHE_TTL', 600),
+
+    /*
+    |-------------------------------------------
     | Most Popular plan IDs
     |-------------------------------------------
     |

@@ -120,17 +120,23 @@ class AppManager
         }
     }
 
-    public function getPromotionalDiscount($code, $shop_domain = null, $shop_installed_at = null) {
+    /**
+     * $failsafe = false returns [] when App Manager can't be reached, for the
+     * charge: the billing page shows no promotional discount then either.
+     */
+    public function getPromotionalDiscount($code, $shop_domain = null, $shop_installed_at = null, $failsafe = true) {
+
+        $fallback = fn () => $failsafe ? $this->prepareDiscount(['shop_domain' => $shop_domain, 'code' => $code]) : [];
 
         try {
             $data = $this->client->get('discount', ['shop_domain' => $shop_domain, 'code' => $code, 'shop_installed_at' => $shop_installed_at]);
             if($data->getStatusCode() === 404)
                 return [];
-            return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->prepareDiscount(['shop_domain' => $shop_domain, 'code' => $code]);
+            return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $fallback();
         }
         catch (\Exception $e) {
             report($e);
-            return $this->prepareDiscount(['shop_domain' => $shop_domain,  'code' => $code]);
+            return $fallback();
         }
     }
 

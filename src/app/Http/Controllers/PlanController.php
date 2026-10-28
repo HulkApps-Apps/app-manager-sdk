@@ -7,6 +7,7 @@ use HulkApps\AppManager\app\Traits\FailsafeHelper;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use function HulkApps\AppManager\app\appManagerCacheData;
 use function HulkApps\AppManager\app\deleteAppManagerCache;
 use function HulkApps\AppManager\app\isValidUser;
@@ -44,7 +45,25 @@ class PlanController extends Controller
         $storeFieldName = config('app-manager.field_names.name', 'name');
         $planFieldName = config('app-manager.field_names.plan_id', 'plan_id');
         $shopifyPlanFieldName = config('app-manager.field_names.shopify_plan', 'shopify_plan');
+        // Many code lookups from one shop look like someone guessing codes: carry on without the code.
+        if ($request->filled('discount_code')) {
+            $limiterKey = 'app-manager.discount-code:' . $request->get('shop_domain', $request->ip());
+            if (RateLimiter::tooManyAttempts($limiterKey, 30)) {
+                $request->offsetUnset('discount_code');
+            } else {
+                RateLimiter::hit($limiterKey, 60);
+            }
+        }
+
+        // The resolved discount depends on the code, so the code is part of the key.
         $cacheKey = $request->has('shop_domain') ? 'app-manager.plans-'.$request->get('shop_domain') : 'app-manager.all-plans';
+        if ($request->filled('discount_code')) {
+            $cacheKey .= '-' . md5((string) $request->get('discount_code'));
+        }
+
+        // A shop's plans carry its live discount, which can start, end or run out
+        // without a cache burst reaching this app, so they expire.
+        $cacheTtl = $request->has('shop_domain') ? (int) config('app-manager.plans_cache_ttl', 600) : null;
 
         $response = appManagerCacheData($cacheKey, function () use ($request, $shopTableName, $storeFieldName, $planFieldName, $shopifyPlanFieldName, $cacheKey, $mostPopularPlanIds, $sdkVersions) {
             $shopify_plan = $plan = $globalPlan = $plans = $trialActivatedAt = $appFaqs = null;
@@ -127,7 +146,7 @@ class PlanController extends Controller
                         && !empty($activeCharge['bundle_charge'])
                     ),
             ];
-        });
+        }, $cacheTtl);
 
         return response()->json($response);
     }

@@ -138,7 +138,8 @@ class ChargeController extends Controller
                 $candidates[] = $automatic;
             }
             if ($request->filled('discount_code')) {
-                $coded = \AppManager::getPromotionalDiscount($request->get('discount_code'), $request->shop, $shopInstalledAt);
+                // No fail-safe copy: during an outage the billing page shows no promotional discount, so none is charged.
+                $coded = \AppManager::getPromotionalDiscount($request->get('discount_code'), $request->shop, $shopInstalledAt, false);
                 if (!empty($coded)) {
                     $candidates[] = $coded;
                 }
