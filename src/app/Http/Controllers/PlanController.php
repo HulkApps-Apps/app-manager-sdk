@@ -49,17 +49,13 @@ class PlanController extends Controller
         $response = appManagerCacheData($cacheKey, function () use ($request, $shopTableName, $storeFieldName, $planFieldName, $shopifyPlanFieldName, $cacheKey, $mostPopularPlanIds, $sdkVersions) {
             $shopify_plan = $plan = $globalPlan = $plans = $trialActivatedAt = $appFaqs = null;
             $choose_later = false;
-            $shopDomain = $request->get('shop_domain');
-            $shopInstalledAt = null;
 
             if ($request->has('shop_domain')) {
+                $shopDomain = $request->get('shop_domain');
                 $userData = DB::table($shopTableName)->where($storeFieldName, $shopDomain)->get();
                 $shopify_plan = collect($userData)->pluck($shopifyPlanFieldName)->first();
                 $activePlanId = collect($userData)->pluck($planFieldName)->first() ?? null;
-                $shopInstalledAt = collect($userData)->pluck(config('app-manager.field_names.created_at', 'created_at'))->first() ?? null;
-                // App Manager resolves the winning promotional discount (automatic +
-                // this code, by priority) and injects it per-plan — no extra call.
-                $plans = \AppManager::getPlans($shopDomain, $activePlanId, $shopify_plan, $sdkVersions, $request->get('discount_code'), $shopInstalledAt);
+                $plans = \AppManager::getPlans($shopDomain, $activePlanId, $shopify_plan, $sdkVersions);
                 $appFaqs = \AppManager::getAppFaqs();
                 $plan = collect($plans)->where('id', $activePlanId)->first();
                 $trialActivatedAt = collect($userData)->pluck(config('app-manager.field_names.trial_activated_at', 'trial_activated_at'))->first() ?? null;
@@ -73,8 +69,13 @@ class PlanController extends Controller
 
             $defaultPlanId = $this->chooseLaterPlanId($plans, $shopify_plan);
 
-            // Discounts now ride on each plan (injected by /plans above).
-            $promotionalDiscount = [];
+            $promotionalDiscount=[];
+            if($request->has('discount_code')){
+                $discountCode = $request->get('discount_code');
+                if (!empty($discountCode)) {
+                    $promotionalDiscount = \AppManager::getPromotionalDiscount($discountCode, $shopDomain);
+                }
+            }
 
             if(!empty($plan) && isset($plan['is_global']) && $plan['is_global']){
                 $bundlePlan = $plan;

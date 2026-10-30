@@ -31,7 +31,7 @@ class AppManager
         }
     }
 
-    public function getPlans($shop_domain, $active_plan_id = null, $shopify_plan = null, $sdk_versions = [], $discount_code = null, $shop_installed_at = null) {
+    public function getPlans($shop_domain, $active_plan_id = null, $shopify_plan = null, $sdk_versions = []) {
 
         try {
             $payload = ['shop_domain' => $shop_domain];
@@ -43,14 +43,6 @@ class AppManager
             }
             if (!empty($sdk_versions)) {
                 $payload['sdk_versions'] = $sdk_versions;
-            }
-            // Let App Manager resolve the winning promotional discount (automatic +
-            // this code, by priority) and inject it per-plan — no extra round trip.
-            if (!empty($discount_code)) {
-                $payload['discount_code'] = $discount_code;
-            }
-            if (!empty($shop_installed_at)) {
-                $payload['shop_installed_at'] = $shop_installed_at;
             }
             $data = $this->client->get('plans', $payload);
             return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->preparePlans($shop_domain, $active_plan_id, $shopify_plan);
@@ -120,10 +112,10 @@ class AppManager
         }
     }
 
-    public function getPromotionalDiscount($code, $shop_domain = null, $shop_installed_at = null) {
+    public function getPromotionalDiscount($code, $shop_domain = null) {
 
         try {
-            $data = $this->client->get('discount', ['shop_domain' => $shop_domain, 'code' => $code, 'shop_installed_at' => $shop_installed_at]);
+            $data = $this->client->get('discount', ['shop_domain' => $shop_domain, 'code' => $code]);
             if($data->getStatusCode() === 404)
                 return [];
             return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->prepareDiscount(['shop_domain' => $shop_domain, 'code' => $code]);
@@ -131,21 +123,6 @@ class AppManager
         catch (\Exception $e) {
             report($e);
             return $this->prepareDiscount(['shop_domain' => $shop_domain,  'code' => $code]);
-        }
-    }
-
-    public function getAutomaticDiscount($shop_domain = null, $shop_installed_at = null) {
-
-        try {
-            $data = $this->client->get('automatic-discount', ['shop_domain' => $shop_domain, 'shop_installed_at' => $shop_installed_at]);
-            if($data->getStatusCode() === 404)
-                return [];
-            // Automatic/targeted discounts are live-path only (no fail-safe copy).
-            return Str::startsWith($data->getStatusCode(), '2') ? $data->json() : [];
-        }
-        catch (\Exception $e) {
-            report($e);
-            return [];
         }
     }
 

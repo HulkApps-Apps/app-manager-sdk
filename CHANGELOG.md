@@ -2,37 +2,39 @@
 
 All notable changes to `appmanager` will be documented in this file
 
-## 3.7.0
+## 3.6.3
 
-Promotional-discount targeting + automatic discounts.
+Reverts the unreleased promotional-discount work that had been merged to
+`master` but never tagged. This release is functionally identical to 3.6.2.
 
-Automatic discounts — a discount flagged `is_automatic` in App Manager applies
-to eligible shops with no code needed. App Manager resolves the winning discount
-(the automatic one and, when a code is supplied, the coded one — by `priority`,
-automatic breaking a tie) and injects it per-plan into the `/plans` response, so
-the billing page needs no extra round trip and nothing to opt in on the frontend.
+Promotional discounts (automatic, audience, upgrades-only and per-plan
+targeting) are resolved in App Manager and injected into each plan's existing
+`discount` / `discount_type` / `cycle_count` fields, which this SDK already
+applies on the billing page and at charge. No SDK support is required, so the
+targeting layer is removed from the SDK:
 
-Targeting (audience, per-plan rates, upgrades-only) is enforced by App Manager so
-the billing-page display and the actual charge share one verdict:
+- Removed `getAutomaticDiscount`, the `discount_code` and `shop_installed_at`
+  parameters on `getPlans`, the per-plan override and `upgrades_only` handling
+  in the charge controller, and the discount-aware plans-cache changes.
+- Coded promotional discounts continue to work through the existing
+  `getPromotionalDiscount` path, and app-manager-injected per-plan discounts
+  continue to apply unchanged.
 
-- `getPlans()` forwards the discount code and the shop's install date
-  (`shop_installed_at`, for the fresh-install window) so `/plans` can resolve and
-  inject the winning per-plan discount.
-- `ChargeController::process()` resolves the same winner by priority and applies
-  the per-plan value / type / cycles for the chosen plan, honouring "upgrades
-  only" (discount only when the new plan costs more than the merchant's current).
-- `getAutomaticDiscount()` + the `/automatic-discount` endpoint expose the best
-  eligible automatic discount for the charge path.
+No configuration or frontend changes are needed: update the package and clear
+caches.
 
-Automatic + targeting is live-path only: App Manager withholds these discounts
-from the fail-safe backup, so during an App Manager outage they are neither shown
-nor charged (consistent). Plain coded discounts still fail-safe as before, and
-there is no fail-safe schema change in this release.
+## 3.6.2
 
-App Manager only begins sending the `audience` column to an app's fail-safe
-backup once the app reports backend SDK **>= 3.7.0**, so tag this release 3.7.0.
-Until then App Manager withholds audience-gated discounts from the fail-safe
-backup entirely (they are still enforced on the live path).
+Fix: the fail-safe charges table now cancels only the shop's *active* charge
+instead of every charge for the shop, so a replayed or overwritten cancel can
+no longer flip an unrelated charge row to `cancelled`.
+
+- `cancelCharge` and `cancelChargeHelper` add a `status in (active, ACTIVE)`
+  filter before marking a fail-safe charge row `cancelled`; historical and
+  already-cancelled rows are left untouched.
+
+No configuration or frontend changes are needed: update the package and clear
+caches.
 
 ## 3.6.1
 
