@@ -47,7 +47,7 @@ class PlanController extends Controller
         $cacheKey = $request->has('shop_domain') ? 'app-manager.plans-'.$request->get('shop_domain') : 'app-manager.all-plans';
 
         $response = appManagerCacheData($cacheKey, function () use ($request, $shopTableName, $storeFieldName, $planFieldName, $shopifyPlanFieldName, $cacheKey, $mostPopularPlanIds, $sdkVersions) {
-            $shopify_plan = $plan = $globalPlan = $plans = $trialActivatedAt = $appFaqs = null;
+            $shopify_plan = $plan = $globalPlan = $plans = $trialActivatedAt = $appFaqs = $shopDomain = $shopInstalledAt = null;
             $choose_later = false;
 
             if ($request->has('shop_domain')) {
@@ -55,7 +55,9 @@ class PlanController extends Controller
                 $userData = DB::table($shopTableName)->where($storeFieldName, $shopDomain)->get();
                 $shopify_plan = collect($userData)->pluck($shopifyPlanFieldName)->first();
                 $activePlanId = collect($userData)->pluck($planFieldName)->first() ?? null;
-                $plans = \AppManager::getPlans($shopDomain, $activePlanId, $shopify_plan, $sdkVersions);
+                // The shop's install date, so App Manager can target "fresh install" discounts.
+                $shopInstalledAt = collect($userData)->pluck(config('app-manager.field_names.created_at', 'created_at'))->first() ?? null;
+                $plans = \AppManager::getPlans($shopDomain, $activePlanId, $shopify_plan, $sdkVersions, $shopInstalledAt);
                 $appFaqs = \AppManager::getAppFaqs();
                 $plan = collect($plans)->where('id', $activePlanId)->first();
                 $trialActivatedAt = collect($userData)->pluck(config('app-manager.field_names.trial_activated_at', 'trial_activated_at'))->first() ?? null;
@@ -73,7 +75,7 @@ class PlanController extends Controller
             if($request->has('discount_code')){
                 $discountCode = $request->get('discount_code');
                 if (!empty($discountCode)) {
-                    $promotionalDiscount = \AppManager::getPromotionalDiscount($discountCode, $shopDomain);
+                    $promotionalDiscount = \AppManager::getPromotionalDiscount($discountCode, $shopDomain, $shopInstalledAt);
                 }
             }
 

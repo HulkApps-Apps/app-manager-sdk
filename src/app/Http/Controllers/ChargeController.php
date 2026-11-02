@@ -38,7 +38,12 @@ class ChargeController extends Controller
 
         if ($shop) {
 
-            $plan = \AppManager::getPlan($plan_id, $request->shop);
+            // The shop's install date, so a "fresh install" promotional discount
+            // resolves to the same price the billing page showed.
+            $createdAtField = config('app-manager.field_names.created_at', 'created_at');
+            $shopInstalledAt = $shop->$createdAtField ?? null;
+
+            $plan = \AppManager::getPlan($plan_id, $request->shop, $shopInstalledAt);
             if ($plan['price'] == 0 && (!isset($plan['is_external_charge']) || !$plan['is_external_charge'])) {
                 $apiVersion = config('app-manager.shopify_api_version');
 
@@ -130,7 +135,7 @@ class ChargeController extends Controller
             if($request->has('discount_code')){
                 $discountCode = $request->get('discount_code');
                 if (!empty($discountCode)) {
-                    $promotionalDiscount = \AppManager::getPromotionalDiscount($discountCode, $request->shop);
+                    $promotionalDiscount = \AppManager::getPromotionalDiscount($discountCode, $request->shop, $shopInstalledAt);
                 }
             }
 
