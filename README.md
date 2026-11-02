@@ -143,8 +143,34 @@ Shopify requires public apps to use **expiring offline access tokens** from
 straight from the database can be dead by the time it is used.
 
 The SDK does not store or renew tokens itself — your app does. Tell the SDK
-where to get a live token by implementing the contract and pointing the config
-at it. **Apps still on non-expiring tokens need do nothing.**
+where to get a live token by setting one config key. **Apps still on
+non-expiring tokens need do nothing.**
+
+Which option you want depends on how your app authenticates.
+
+#### Authentication handled by kyon147/laravel-shopify
+
+Use the built-in resolver. It asks the package for the token and lets the package
+do the renewing, so there is nothing to write:
+
+```php
+// config/app-manager.php
+'shopify_token_resolver' => \HulkApps\AppManager\Shopify\LaravelShopifyTokenResolver::class,
+```
+
+Requires **v27.3.0 or later** with `SHOPIFY_EXPIRING_OFFLINE_TOKENS=true`.
+
+Two things it handles for you: the package only refreshes when it builds its own
+API client, which the SDK never does, so the resolver asks explicitly; and after
+a rejected token it widens the package's renewal window to force one, since the
+package has no force of its own (`shopify_force_renewal_days`, `0` to disable).
+
+If the package is absent, too old, or does not know the shop, it falls back to
+reading the token column — so the key is safe to set before you migrate.
+
+#### Custom authentication, or another package
+
+Implement the contract against whatever owns your tokens:
 
 ```php
 use HulkApps\AppManager\Contracts\ShopifyTokenResolver;
@@ -168,6 +194,7 @@ class MyTokenResolver implements ShopifyTokenResolver
 
 Both methods are called from web requests and queued work alike, so they must
 be safe to call concurrently for the same shop — serialize renewals per shop.
+Neither should throw: return `null` and let the SDK decide what to do.
 
 **Your storage is your own.** The SDK asks for a string and never looks at your
 schema, so how you keep tokens is entirely up to you: whatever columns you like,

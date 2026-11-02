@@ -99,11 +99,29 @@ return [
     | resolver backed by whatever renews their tokens. Charge calls then use a
     | live token, and recover once from a rejected one.
     |
+    | Apps on kyon147/laravel-shopify can use the built-in resolver:
+    | \HulkApps\AppManager\Shopify\LaravelShopifyTokenResolver::class
+    |
+    | Apps with custom authentication implement the contract themselves.
+    |
     | A class name rather than a closure, so `php artisan config:cache` works.
     |
     */
 
     'shopify_token_resolver' => null,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Forced renewal window (days)
+    |--------------------------------------------------------------------------
+    |
+    | Only read by LaravelShopifyTokenResolver, after Shopify has rejected a
+    | token. That package has no way to force a renewal, so its refresh-token
+    | renewal window is widened to make one due. Set to 0 to switch forcing off.
+    |
+    */
+
+    'shopify_force_renewal_days' => 36500,
 
     /*
     |--------------------------------------------------------------------------
