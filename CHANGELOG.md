@@ -2,6 +2,29 @@
 
 All notable changes to `appmanager` will be documented in this file
 
+## 3.8.0
+
+A built-in token resolver for apps whose authentication is handled by
+kyon147/laravel-shopify. Backward compatible: an app that changes nothing keeps
+the previous behaviour.
+
+- New `HulkApps\AppManager\Shopify\LaravelShopifyTokenResolver`. Point
+  `shopify_token_resolver` at it and the SDK asks that package for the shop's
+  token, letting the package do the renewing. Nothing to write in the app.
+- It asks the package to refresh explicitly, because the package only renews
+  when it builds its own API client and the SDK never does.
+- After Shopify rejects a token the package offers no way to force a renewal, so
+  the resolver widens the package's refresh-token renewal window to make one
+  due. New `shopify_force_renewal_days` config (default 36500); `0` switches
+  forcing off. The package's own per-shop lock and re-read still apply.
+- Falls back to reading the token column when the package is absent, too old, or
+  does not know the shop, so the config key can be set before migrating.
+- The package is never a dependency: its classes are referenced by name and
+  guarded, so the SDK runs without it.
+
+Requires kyon147/laravel-shopify v27.3.0 or later. Apps with custom
+authentication keep implementing the contract themselves; that path is unchanged.
+
 ## 3.6.3
 
 Reverts the unreleased promotional-discount work that had been merged to
