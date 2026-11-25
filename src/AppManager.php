@@ -31,7 +31,7 @@ class AppManager
         }
     }
 
-    public function getPlans($shop_domain, $active_plan_id = null, $shopify_plan = null, $sdk_versions = []) {
+    public function getPlans($shop_domain, $active_plan_id = null, $shopify_plan = null, $sdk_versions = [], $shop_installed_at = null) {
 
         try {
             $payload = ['shop_domain' => $shop_domain];
@@ -43,6 +43,10 @@ class AppManager
             }
             if (!empty($sdk_versions)) {
                 $payload['sdk_versions'] = $sdk_versions;
+            }
+            // Lets App Manager target "fresh install" discounts; it reads nothing else into it.
+            if (!empty($shop_installed_at)) {
+                $payload['shop_installed_at'] = $shop_installed_at;
             }
             $data = $this->client->get('plans', $payload);
             return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->preparePlans($shop_domain, $active_plan_id, $shopify_plan);
@@ -67,10 +71,14 @@ class AppManager
         }
     }
 
-    public function getPlan($plan_id, $shop_domain = null) {
+    public function getPlan($plan_id, $shop_domain = null, $shop_installed_at = null) {
 
         try {
-            $data = $this->client->get('plan', ['plan_id' => $plan_id, 'shop_domain' => $shop_domain]);
+            $params = ['plan_id' => $plan_id, 'shop_domain' => $shop_domain];
+            if (!empty($shop_installed_at)) {
+                $params['shop_installed_at'] = $shop_installed_at;
+            }
+            $data = $this->client->get('plan', $params);
             return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->preparePlan(['plan_id' => $plan_id, 'shop_domain' => $shop_domain]);
         }
         catch (\Exception $e) {
@@ -112,10 +120,10 @@ class AppManager
         }
     }
 
-    public function getPromotionalDiscount($code, $shop_domain = null) {
+    public function getPromotionalDiscount($code, $shop_domain = null, $shop_installed_at = null) {
 
         try {
-            $data = $this->client->get('discount', ['shop_domain' => $shop_domain, 'code' => $code]);
+            $data = $this->client->get('discount', ['shop_domain' => $shop_domain, 'code' => $code, 'shop_installed_at' => $shop_installed_at]);
             if($data->getStatusCode() === 404)
                 return [];
             return (Str::startsWith($data->getStatusCode(), '2') || (Str::startsWith($data->getStatusCode(), '4') && $data->getStatusCode() != 429)) ? $data->json() : $this->prepareDiscount(['shop_domain' => $shop_domain, 'code' => $code]);

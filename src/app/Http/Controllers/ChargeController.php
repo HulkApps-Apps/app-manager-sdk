@@ -38,7 +38,27 @@ class ChargeController extends Controller
 
         if ($shop) {
 
-            $plan = \AppManager::getPlan($plan_id, $request->shop);
+            // The shop's install date, for App Manager's "fresh install" targeting.
+            $createdAtField = config('app-manager.field_names.created_at', 'created_at');
+            $shopInstalledAt = $shop->$createdAtField ?? null;
+
+            // MGR-99: only allow a plan the shop is eligible for (same list the billing page
+            // shows); refuse anything else so a merchant can't process another plan by id.
+            $eligiblePlanIds = collect(\AppManager::getPlans(
+                $request->shop,
+                $shop->$storePlanField ?? null,
+                $shop->$storeShopifyPlanField ?? null,
+                [],
+                $shopInstalledAt
+            ))->pluck('id')->map(static fn ($id) => (string) $id)->all();
+            if (!in_array((string) $plan_id, $eligiblePlanIds, true)) {
+                return response()->json(['message' => 'This plan is not available for your shop.'], 422);
+            }
+
+            $plan = \AppManager::getPlan($plan_id, $request->shop, $shopInstalledAt);
+            if (empty($plan) || !isset($plan['price'])) {
+                return response()->json(['message' => 'This plan is not available.'], 422);
+            }
             if ($plan['price'] == 0 && (!isset($plan['is_external_charge']) || !$plan['is_external_charge'])) {
                 $apiVersion = config('app-manager.shopify_api_version');
 
@@ -130,7 +150,7 @@ class ChargeController extends Controller
             if($request->has('discount_code')){
                 $discountCode = $request->get('discount_code');
                 if (!empty($discountCode)) {
-                    $promotionalDiscount = \AppManager::getPromotionalDiscount($discountCode, $request->shop);
+                    $promotionalDiscount = \AppManager::getPromotionalDiscount($discountCode, $request->shop, $shopInstalledAt);
                 }
             }
 
@@ -139,17 +159,22 @@ class ChargeController extends Controller
                 && empty($plan['is_global'])
                 && (empty($promotionalDiscount['plan_relation']) || in_array($plan['id'], $promotionalDiscount['plan_relation']));
 
+            // A code can set a different value per plan; use this plan's override when present.
+            $promoOverrides = $promotionalDiscount['plan_overrides'] ?? [];
+            $promoOverride = is_array($promoOverrides) ? ($promoOverrides[$plan['id']] ?? []) : [];
+            $promoValue = $promoOverride['value'] ?? $promotionalDiscount['value'] ?? 0;
+            $promoType = $promoOverride['type'] ?? $promotionalDiscount['type'] ?? 'percentage';
+            $promoDuration = (int) ($promoOverride['duration_intervals'] ?? $promotionalDiscount['duration_intervals'] ?? 0);
+
             $discount = [];
             if ($promoApplies) {
-                $discount_type = $promotionalDiscount['type'] ?? "percentage";
-
                 $discount = [
                     'value' => [
-                        $discount_type => $discount_type === "percentage" ? (float)$promotionalDiscount['value'] / 100 : ($promotionalDiscount['value'] <= $plan['price'] ? $promotionalDiscount['value'] : $plan['price']),
+                        $promoType => $promoType === "percentage" ? (float)$promoValue / 100 : ($promoValue <= $plan['price'] ? $promoValue : $plan['price']),
                     ],
                 ];
-                if((int)$promotionalDiscount['duration_intervals']){
-                    $discount['durationLimitInIntervals'] = (int)$promotionalDiscount['duration_intervals'];
+                if ($promoDuration) {
+                    $discount['durationLimitInIntervals'] = $promoDuration;
                 }
             } elseif ($plan['discount']) {
                 $discount_type = $plan['discount_type'] ?? "percentage";
@@ -170,9 +195,9 @@ class ChargeController extends Controller
             if (!empty($discount)) {
                 if ($promoApplies) {
                     $discountSnapshot = [
-                        'discount_value' => (float) $promotionalDiscount['value'],
-                        'discount_type' => $promotionalDiscount['type'] ?? 'percentage',
-                        'discount_duration_intervals' => (int) ($promotionalDiscount['duration_intervals'] ?? 0),
+                        'discount_value' => (float) $promoValue,
+                        'discount_type' => $promoType,
+                        'discount_duration_intervals' => $promoDuration,
                         'discount_source' => 'promotional',
                         'promotional_discount_id' => (int) ($promotionalDiscount['id'] ?? 0),
                     ];

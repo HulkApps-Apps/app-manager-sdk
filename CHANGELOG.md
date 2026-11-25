@@ -2,6 +2,34 @@
 
 All notable changes to `appmanager` will be documented in this file
 
+## 4.0.0
+
+Completes App Manager's promotional-discount targeting on the charge side, and closes
+a plan-eligibility hole in the plan-activation route (MGR-99). A merchant that uses
+only public plans, its assigned custom plans and its current plan sees no change; the
+only behaviour change is that ineligible plan ids are now refused.
+
+- **Security (MGR-99):** `plan/process/{plan_id}` now only activates or charges a plan
+  the shop is actually eligible for — the same list the billing page shows (public
+  plans, an assigned unused custom plan, or the shop's current plan), from
+  `getPlans()`. Any other id (a private plan, another shop's custom plan, a deleted or
+  unknown plan) returns **422** with no activation and no charge. The same filtered
+  list applies during an App Manager outage, because `getPlans()` falls back to the
+  failsafe copy. The charge callback is unaffected (it reads the plan from the
+  `return_url` Shopify stored).
+- `getPlans`, `getPlan` and `getPromotionalDiscount` now forward the shop's install
+  date (`shop_installed_at`), read from `config('app-manager.field_names.created_at')`,
+  so App Manager can resolve "fresh install" discounts to the same price the billing
+  page shows. When it isn't sent, install-date discounts stay inactive (never
+  mis-charged).
+- The charge now honours a discount code's **per-plan value** (`plan_overrides`): it
+  applies the override for the plan being charged, falling back to the discount's
+  single value when there's no override. The captured discount snapshot records the
+  same per-plan value. Older versions charge the single value, so App Manager keeps
+  the billing page and the charge identical on every version.
+
+No configuration or frontend changes are needed: update the package and clear caches.
+
 ## 3.8.0
 
 A built-in token resolver for apps whose authentication is handled by
